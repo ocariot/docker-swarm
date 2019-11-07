@@ -19,6 +19,7 @@ verify_rabbitmq_image(){
 
     if [[ ! ${OCARIOT_RABBITMQ_IMAGE} ]];then
         docker build --tag ocariot-rabbitmq config/rabbitmq
+        waiting_rabbitmq
     fi
 }
 
@@ -106,7 +107,7 @@ fi
 configure_environment
 
 # Verifying the existence of RabbitMQ image
-verify_rabbitmq_image > /dev/null 2>&1
+verify_rabbitmq_image
 
 # Cleaning all files that contain the access tokens
 clear_tokens > /dev/null 2>&1
