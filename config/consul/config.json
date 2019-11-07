@@ -1,0 +1,26 @@
+{
+  "datacenter": "ocariot",
+  "domain": "consul",
+  "data_dir": "/consul/data",
+  "addresses": {
+    "https": "0.0.0.0"
+  },
+  "bind_addr": "0.0.0.0",
+  "advertise_addr": "127.0.0.1",
+  "server": true,
+  "verify_incoming_rpc": true,
+  "verify_incoming": true,
+  "verify_outgoing": true,
+  "verify_server_hostname": true,
+  "auto_encrypt": {
+    "allow_tls": true
+  },
+  "ca_file": "/etc/consul/.certs/ca.crt",
+  "cert_file": "/etc/consul/.certs/server.cert",
+  "key_file": "/etc/consul/.certs/server.key",
+  "ports": {
+    "http": -1,
+    "https": 8501
+  },
+  "bootstrap_expect": 1
+}

@@ -1,0 +1,16 @@
+.DS_Store
+
+# IDE
+.idea
+
+# Environment variables file
+.env
+
+# Certificates and keys directories
+.certs
+*.pem
+*.crt
+*.key
+*.csr
+config/vault/tokens
+config/vault/keys
