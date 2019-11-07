@@ -222,7 +222,7 @@ configure_rabbitmq_plugin()
         vhosts='{"ocariot":{"configure": ".*", "write": ".*", "read": ".*"}}' > /dev/null
 
     echo "Stack initialized successfully!!! :)"
-    wget -qO - https://pastebin.com/raw/WESJWTjM
+    wget -qO - https://pastebin.com/raw/jNnscFJX
 }
 
 # Function responsible for generate all tokens
@@ -322,7 +322,7 @@ configure_vault()
         revoke_leases "${TOKENS_TO_REVOKE}"
 
         echo "Stack initialized successfully!!! :)"
-        wget -qO - https://pastebin.com/raw/WESJWTjM
+        wget -qO - https://pastebin.com/raw/jNnscFJX
 
         # Finishing the script execution
         exit
