@@ -18,7 +18,7 @@ verify_rabbitmq_image(){
     OCARIOT_RABBITMQ_IMAGE=$(docker image ls | grep ocariot-rabbitmq)
 
     if [[ ! ${OCARIOT_RABBITMQ_IMAGE} ]];then
-        docker build --tag ocariot-rabbitmq config/rabbitmq
+        docker build --tag ocariot-rabbitmq config/rabbitmq > /dev/null &
         waiting_rabbitmq
     fi
 }
