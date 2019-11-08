@@ -116,10 +116,10 @@ generate_certificates()
 }
 
 mkdir -p $(pwd)/config/vault/.certs
-rm $(pwd)/config/vault/.certs/*
+rm $(pwd)/config/vault/.certs/* -f
 
 mkdir -p $(pwd)/config/consul/.certs
-rm $(pwd)/config/consul/.certs/*
+rm $(pwd)/config/consul/.certs/* -f
 
 CONSUL_CLIENT="vault"
 
@@ -131,3 +131,4 @@ generate_certificates ${CONSUL_SERVER} $(pwd)/config/consul/.certs "server"
 
 # (Optional) Remove unused files at the moment
 rm -rf "${DIR}/ca.key" "${DIR}/ca.srl" ".srl" ${DIR}/*.cnf
+mkdir -p "${DIR}"
