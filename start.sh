@@ -18,7 +18,8 @@ verify_rabbitmq_image(){
     OCARIOT_RABBITMQ_IMAGE=$(docker image ls | grep ocariot-rabbitmq)
 
     if [[ ! ${OCARIOT_RABBITMQ_IMAGE} ]];then
-        docker build --tag ocariot-rabbitmq config/rabbitmq
+        docker build --tag ocariot-rabbitmq config/rabbitmq > /dev/null &
+        waiting_rabbitmq
     fi
 }
 
@@ -56,6 +57,39 @@ configure_environment()
     touch config/vault/keys
 }
 
+# Creating RabbitMQ image
+waiting_rabbitmq()
+{
+    printf "Wait, We are creating RabbitMQ image for you ;)"
+    COMMAND="docker image ls | grep ocariot-rabbitmq"
+    RABBITMQ_RET=$(bash -c "${COMMAND}")
+    while [[ ${RABBITMQ_RET} == "" ]]
+    do
+        RABBITMQ_RET=$(bash -c "${COMMAND}")
+        printf "."
+        sleep 1
+    done
+    printf "\n"
+}
+
+# Waiting Startup Vault
+waiting_vault()
+{
+   docker stack ps $1 > /dev/null 2>&1
+   if [ "$?" -ne 1 ]; then
+       COMMAND="docker stack ps ocariot -f name=ocariot_vault 2> /dev/null | grep Running"
+       VAULT_RET=$(bash -c "${COMMAND}")
+       printf "Waiting Startup Vault"
+       while [[ ${VAULT_RET} == "" ]]
+       do
+          VAULT_RET=$(bash -c "${COMMAND}")
+          printf "."
+          sleep 1
+       done
+       printf "\n"
+  fi
+}
+
 if [ "$#" -ne 1 ]; then
     echo -e "Illegal number of parameters. \nExample Usage: \n\t sudo ./start <STACK_NAME>"
     exit
@@ -73,7 +107,7 @@ fi
 configure_environment
 
 # Verifying the existence of RabbitMQ image
-verify_rabbitmq_image > /dev/null 2>&1
+verify_rabbitmq_image
 
 # Cleaning all files that contain the access tokens
 clear_tokens > /dev/null 2>&1
@@ -84,6 +118,9 @@ config/consul/create-consul-and-vault-certs.sh > /dev/null 2>&1
 
 # Executing the services in mode swarm defined in docker-compose.yml file
 docker stack deploy -c docker-compose.yml $1
+
+# Waiting Startup Vault
+waiting_vault $1
 
 # Monitoring Vault service
 docker service logs $1_vault -f
