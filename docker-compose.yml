@@ -332,7 +332,7 @@ services:
       - ISSUER=ocariot
       - API_GATEWAY_SERVICE=https://api-gateway:8081
       - ACCOUNT_SERVICE=https://account:3001
-      - ACTIVITY_SERVICE=https://iot-tracking:4001
+      - IOT_TRACKING_SERVICE=https://iot-tracking:4001
       - DS_AGENT_SERVICE=https://ds-agent:5001
       - QUESTIONNAIRE_SERVICE=https://quest:6001
       - GAMIFICATION_SERVICE=https://gamification:7001
