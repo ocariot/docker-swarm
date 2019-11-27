@@ -265,19 +265,19 @@ services:
     image: percona/percona-server-mongodb:latest
     user: root
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
-        max_attempts: 15 
+        condition: any
+        delay: 15s
+        max_attempts: 15
     environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
       - VAULT_PORT=${VAULT_PORT}
-    volumes: 
+    volumes:
       - "psmdb-food-data:/data/db"
       - "./config/vault/tokens/access-token-psmdb-food:/tmp/access-token-psmdb-food"
     command: initializing_psmdb.sh
-    configs: 
+    configs:
       - source: ocariot-mongo-config
         target: /tmp/base_conf_mongod
       - source: ocariot-init-psmdb-config
@@ -294,17 +294,17 @@ services:
       options:
         max-size: 100m
 
-  redis-api-gateway: 
+  redis-api-gateway:
     hostname: ocariot-redis-api-gateway
     image: redis:latest
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
-        max_attempts: 15 
-    volumes: 
-      - "redis-api-gateway-data:/redis-master-data"
+        condition: any
+        delay: 15s
+        max_attempts: 15
+    volumes:
+      - "redis-api-gateway-data:/data"
       - "./config/redisdb/redis.conf:/etc/redis.conf"
     command: ["redis-server", "/etc/redis.conf"]
     logging:
@@ -312,14 +312,32 @@ services:
       options:
         max-size: 100m
 
-  api-gateway: 
+  redis-ds-agent: # Redis container for the Data Sync Agent
+    hostname: ocariot-redis-ds-agent
+    image: redis:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
+    volumes:
+      - "redis-ds-agent-data:/data"
+      - "./config/redisdb/redis.conf:/etc/redis.conf"
+    command: ["redis-server", "/etc/redis.conf"]
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
+  api-gateway:
     hostname: api-gateway-service
     image: ocariot/api-gateway
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
+        condition: any
+        delay: 15s
         max_attempts: 15
     environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
@@ -342,16 +360,16 @@ services:
       - PORT_REDIS=6379
       - HOST_REDIS=redis-api-gateway
     command: initializing_api_gateway.sh
-    volumes: 
+    volumes:
       - "./config/vault/tokens/access-token-api-gateway-service:/tmp/access-token-api-gateway-service"
     ports:
       - ${AG_PORT_HTTP}:8080
       - ${AG_PORT_HTTPS}:8081
-    configs: 
+    configs:
       - source: ocariot-init-api-gateway-config
         target: /usr/bin/initializing_api_gateway.sh
         mode: 0750
-    secrets: 
+    secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
         mode: 0640
@@ -373,29 +391,28 @@ services:
     hostname: account-service
     image: ocariot/account
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
+        condition: any
+        delay: 15s
         max_attempts: 15
-    environment: 
+    environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
       - VAULT_PORT=${VAULT_PORT}
       - NODE_ENV=production
       - PORT_HTTP=3000
       - PORT_HTTPS=3001
-      - HOST_WHITELIST=[*]
       - ISSUER=ocariot
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-    volumes: 
+    volumes:
       - "./config/vault/tokens/access-token-account-service:/tmp/access-token-account-service"
     command: initializing_service.sh
-    configs: 
+    configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
         mode: 0750
-    secrets: 
+    secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
         mode: 0640
@@ -412,10 +429,10 @@ services:
     hostname: iot-tracking-service
     image: ocariot/iot-tracking
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
+        condition: any
+        delay: 15s
         max_attempts: 15
     environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
@@ -423,15 +440,14 @@ services:
       - NODE_ENV=production
       - PORT_HTTP=4000
       - PORT_HTTPS=4001
-      - HOST_WHITELIST=[*]
-    volumes: 
+    volumes:
       - "./config/vault/tokens/access-token-iot-tracking-service:/tmp/access-token-iot-tracking-service"
     command: initializing_service.sh
-    configs: 
+    configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
         mode: 0750
-    secrets: 
+    secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
         mode: 0640
@@ -448,10 +464,10 @@ services:
     hostname: ds-agent-service
     image: ocariot/ds-agent
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
+        condition: any
+        delay: 15s
         max_attempts: 15
     environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
@@ -459,20 +475,20 @@ services:
       - NODE_ENV=production
       - PORT_HTTP=5000
       - PORT_HTTPS=5001
-      - HOST_WHITELIST=[*]
       - FITBIT_CLIENT_ID=${FITBIT_CLIENT_ID}
       - FITBIT_CLIENT_SECRET=${FITBIT_CLIENT_SECRET}
       - FITBIT_CLIENT_SUBSCRIBER=${FITBIT_SUB_VERIFY_CODE}
       - FITBIT_SUBSCRIBER_ID=${FITBIT_SUB_ID}
       - EXPRESSION_AUTO_SYNC=${EXPRESSION_AUTO_SYNC}
+      - REDIS_URI=redis://redis-ds-agent:6379
     volumes:
       - "./config/vault/tokens/access-token-ds-agent-service:/tmp/access-token-ds-agent-service"
     command: initializing_service.sh
-    configs: 
+    configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
         mode: 0750
-    secrets: 
+    secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
         mode: 0640
@@ -489,10 +505,10 @@ services:
     hostname: quest-service
     image: ocariot/quest
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
+        condition: any
+        delay: 15s
         max_attempts: 15
     environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
@@ -500,15 +516,14 @@ services:
       - NODE_ENV=production
       - PROTOCOL=https
       - PORT=6001
-      - HOST_WHITELIST=[*]
     volumes:
       - "./config/vault/tokens/access-token-quest-service:/tmp/access-token-quest-service"
     command: initializing_service.sh
-    configs: 
+    configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
         mode: 0750
-    secrets: 
+    secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
         mode: 0640
@@ -525,10 +540,10 @@ services:
     hostname: gamification-service
     image: ocariot/gamification
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
+        condition: any
+        delay: 15s
         max_attempts: 15
     environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
@@ -536,15 +551,14 @@ services:
       - NODE_ENV=production
       - PROTOCOL=https
       - PORT=7001
-      - HOST_WHITELIST=[*]
     volumes:
       - "./config/vault/tokens/access-token-gamification-service:/tmp/access-token-gamification-service"
     command: initializing_service.sh
-    configs: 
+    configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
         mode: 0750
-    secrets: 
+    secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
         mode: 0640
@@ -561,10 +575,10 @@ services:
     hostname: food-service
     image: ocariot/quest
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
+        condition: any
+        delay: 15s
         max_attempts: 15
     environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
@@ -572,15 +586,14 @@ services:
       - NODE_ENV=production
       - PROTOCOL=https
       - PORT=8001
-      - HOST_WHITELIST=[*]
     volumes:
       - "./config/vault/tokens/access-token-food-service:/tmp/access-token-food-service"
     command: initializing_service.sh
-    configs: 
+    configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
         mode: 0750
-    secrets: 
+    secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
         mode: 0640
@@ -597,20 +610,20 @@ services:
     hostname: rabbitmq
     image: ocariot-rabbitmq
     deploy:
-      replicas: 1 
+      replicas: 1
       restart_policy:
-        condition: any 
-        delay: 15s 
+        condition: any
+        delay: 15s
         max_attempts: 15
     environment:
       - RABBITMQ_MGT_BASE_URL=${RABBITMQ_MGT_BASE_URL}
       - VAULT_BASE_URL=${VAULT_BASE_URL}
       - VAULT_PORT=${VAULT_PORT}
     entrypoint: initializing_rabbitmq.sh
-    volumes: 
+    volumes:
       - "./config/vault/tokens/access-token-rabbitmq:/tmp/access-token-rabbitmq"
       - "rabbitmq-data:/var/lib/rabbitmq"
-    configs: 
+    configs:
       - source: ocariot-init-rabbitmq-config
         target: /usr/bin/initializing_rabbitmq.sh
         mode: 0750
@@ -713,3 +726,5 @@ volumes:
     name: ocariot-rabbitmq-data
   redis-api-gateway-data:
     name: ocariot-redis-api-gateway-data
+  redis-ds-agent-data:
+    name: ocariot-redis-ds-agent-data
