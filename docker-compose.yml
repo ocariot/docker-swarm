@@ -494,6 +494,7 @@ services:
         mode: 0640
     depends_on:
       - psmdb-ds-agent
+      - redis-ds-agent
       - rabbitmq
       - vault
     logging:
