@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+echo ${INSTALL_PATH}
+
+case $1 in
+    start)
+		COMMAND="/scripts/start.sh $(echo $@ | sed "s/$1//g")"
+		;;
+	stop)
+		COMMAND="/scripts/stop.sh $(echo $@ | sed "s/$1//g")"
+		;;
+	backup)
+		COMMAND="/scripts/volumes.sh $@"
+		;;
+	restore)
+		COMMAND="/scripts/volumes.sh $@"
+		;;
+	*)
+		echo "Sorry, I don't understand"
+		exit
+		;;
+esac
+
+${INSTALL_PATH}${COMMAND}

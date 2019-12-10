@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+
 # Cleaning all files that contain the access tokens
 clear_tokens()
 {
@@ -28,7 +30,7 @@ verify_rabbitmq_image(){
 configure_environment()
 {
     # Verifying the existence of .env file
-    if [ ! $(find ./ -name .env) ]
+    if [ ! $(find ${INSTALL_PATH} -name .env) ]
     then
         echo "\".env\" file not found!!!"
 
@@ -37,15 +39,15 @@ configure_environment()
     fi
 
     # Executing .env to capture environment variable defined in it
-    set -a && . .env && set +a
+    set -a && . ${INSTALL_PATH}/.env && set +a
 
     mkdir config/vault/tokens 2> /dev/null
 
     # creating the files that will be used to share
     # the vault access token
-    FILES_TOKEN=$(ls config/vault/policies/ | sed "s/.hcl//g")
+    FILES_TOKEN=$(ls ${INSTALL_PATH}/config/vault/policies/ | sed "s/.hcl//g")
     for FILE_TOKEN in ${FILES_TOKEN}; do
-        touch config/vault/tokens/access-token-${FILE_TOKEN}
+        touch ${INSTALL_PATH}/config/vault/tokens/access-token-${FILE_TOKEN}
         if [ $? -ne 0 ]
         then
             exit
@@ -54,7 +56,7 @@ configure_environment()
 
     # creating the file where the root token will be
     # stored, along with the encryption keys
-    touch config/vault/keys
+    touch ${INSTALL_PATH}/config/vault/keys
 }
 
 # Creating RabbitMQ image
@@ -90,12 +92,14 @@ waiting_vault()
   fi
 }
 
-if [ "$#" -ne 1 ]; then
+STACK_NAME="ocariot"
+
+if [ "$#" -ne 0 ]; then
     echo -e "Illegal number of parameters. \nExample Usage: \n\t sudo ./start <STACK_NAME>"
     exit
 fi
 
-docker stack ps $1 > /dev/null 2>&1
+docker stack ps ${STACK_NAME} > /dev/null 2>&1
 
 if [ "$?" -ne 0 ]; then
     # General function for setting up the environment
@@ -108,25 +112,25 @@ if [ "$?" -ne 0 ]; then
     # Cleaning all files that contain the access tokens
     clear_tokens > /dev/null 2>&1
 
-    CERTS_CONSUL=$(ls config/consul/.certs/)
-    CERTS_VAULT=$(ls config/vault/.certs/)
+    CERTS_CONSUL=$(ls ${INSTALL_PATH}/config/consul/.certs/)
+    CERTS_VAULT=$(ls ${INSTALL_PATH}/config/vault/.certs/)
 
     if [ "${CERTS_CONSUL}" = "" ] || [ "${CERTS_VAULT}" = "" ];
     then
         # Creating server certificates for consul and client
         # certificates for VAULT access to CONSUL through SSL/TLS
-        config/consul/create-consul-and-vault-certs.sh > /dev/null 2>&1
+        ${INSTALL_PATH}/config/consul/create-consul-and-vault-certs.sh > /dev/null 2>&1
     fi
 
 fi
 
-./service_monitor.sh > /dev/null &
+${INSTALL_PATH}/scripts/service_monitor.sh > /dev/null &
 
 # Executing the services in mode swarm defined in docker-compose.yml file
-docker stack deploy -c docker-compose.yml $1
+docker stack deploy -c ${INSTALL_PATH}/docker-compose.yml ${STACK_NAME}
 
 # Waiting Startup Vault
-waiting_vault $1
+waiting_vault ${STACK_NAME}
 
 # Monitoring Vault service
-docker service logs $1_vault -f
+docker service logs ${STACK_NAME}_vault -f

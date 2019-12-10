@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Define where to store the generated certs and metadata.
+INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+
 DIR="/tmp/ocariot-config"
 
 # Optional: Ensure the target directory exists and is empty.
@@ -115,19 +117,19 @@ generate_certificates()
         cp ${DIR}/ca.crt $2/
 }
 
-mkdir -p $(pwd)/config/vault/.certs
-rm $(pwd)/config/vault/.certs/* -f
+mkdir -p ${INSTALL_PATH}/config/vault/.certs
+rm ${INSTALL_PATH}/config/vault/.certs/* -f
 
-mkdir -p $(pwd)/config/consul/.certs
-rm $(pwd)/config/consul/.certs/* -f
+mkdir -p ${INSTALL_PATH}/config/consul/.certs
+rm ${INSTALL_PATH}/config/consul/.certs/* -f
 
 CONSUL_CLIENT="vault"
 
 CONSUL_SERVER="consul,server.ocariot.consul"
 
-generate_certificates ${CONSUL_CLIENT} $(pwd)/config/vault/.certs "consul_client_vault"
+generate_certificates ${CONSUL_CLIENT} ${INSTALL_PATH}/config/vault/.certs "consul_client_vault"
 
-generate_certificates ${CONSUL_SERVER} $(pwd)/config/consul/.certs "server"
+generate_certificates ${CONSUL_SERVER} ${INSTALL_PATH}/config/consul/.certs "server"
 
 # (Optional) Remove unused files at the moment
 rm -rf "${DIR}/ca.key" "${DIR}/ca.srl" ".srl" ${DIR}/*.cnf

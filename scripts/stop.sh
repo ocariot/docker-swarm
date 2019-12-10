@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 
+INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+
+STACK_NAME="ocariot"
+
 clear_volumes()
 {
-    grep -P '(?<=ocariot-).*(?=-data)' docker-compose.yml \
+    grep -P '(?<=ocariot-).*(?=-data)' ${INSTALL_PATH}/docker-compose.yml \
      | sed 's/\( \|name:\)//g' \
      | awk '{system("docker volume rm -f "$1)}'
 }
@@ -14,29 +18,29 @@ help()
     exit
 }
 
-docker stack ps $1 > /dev/null 2>&1
+docker stack ps ${STACK_NAME} > /dev/null 2>&1
 
 if [ "$?" -ne 0 ]; then
     echo "$1 stack services not initialized"
     exit
 fi
 
-if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+if [ "$#" -gt 1 ]; then
     help
 fi
 
-if [ "$#" -eq 2 ] && [ "$2" != "-clear-volumes" ]; then
+if [ "$#" -eq 1 ] && [ "$1" != "-clear-volumes" ]; then
     help
 fi
 
 # Stopping the ocariot stack services  that being run
-docker stack rm $1 > /dev/null 2>&1
+docker stack rm ${STACK_NAME} > /dev/null 2>&1
 
 # Verifying if the services was removed
 printf "Stoping services"
 RET=0
 while [[ $RET -eq 0 ]]; do
-    docker stack ps $1 > /dev/null 2>&1
+    docker stack ps ${STACK_NAME} > /dev/null 2>&1
     RET=$?
     sleep 3
     printf "."
@@ -48,11 +52,11 @@ ps aux \
     | sed '/grep/d' \
     | awk '{system("kill -9 "$2)}'
 
-rm $(pwd)/config/vault/.certs/* -f
-rm $(pwd)/config/consul/.certs/* -f
+rm ${INSTALL_PATH}/config/vault/.certs/* -f
+rm ${INSTALL_PATH}/config/consul/.certs/* -f
 
 # If "-clear-volumes" parameter was passed the
 # volumes will be excluded
-if [ "$2" = "-clear-volumes" ];then
+if [ "$1" = "-clear-volumes" ];then
     clear_volumes > /dev/null
 fi

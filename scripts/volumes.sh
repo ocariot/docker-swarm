@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+
 help()
 {
     echo -e "Illegal number of parameters. \nExample Usage: \n\t sudo ./make_backup.sh <PARAMETER> <OPTION>"
@@ -10,13 +12,13 @@ help()
 
 restart_stack()
 {
-    mkdir config/vault/tokens 2> /dev/null
+    mkdir ${INSTALL_PATH}/config/vault/tokens 2> /dev/null
 
     # creating the files that will be used to share
     # the vault access token
-    FILES_TOKEN=$(ls config/vault/policies/ | sed "s/.hcl//g")
+    FILES_TOKEN=$(ls ${INSTALL_PATH}/config/vault/policies/ | sed "s/.hcl//g")
     for FILE_TOKEN in ${FILES_TOKEN}; do
-        touch config/vault/tokens/access-token-${FILE_TOKEN}
+        touch ${INSTALL_PATH}/config/vault/tokens/access-token-${FILE_TOKEN}
         if [ $? -ne 0 ]
         then
             exit
@@ -95,7 +97,7 @@ VOLUMES_BKP=""
 RUNNING_SERVICES=""
 
 # Verifying if backup folder exist
-if [  "$1" = "restore" ] && [ "$(ls backups 2> /dev/null | wc -l)" = 0 ];
+if [  "$1" = "restore" ] && [ "$(ls ${INSTALL_PATH}/backups 2> /dev/null | wc -l)" = 0 ];
 then
     echo "No container backup was found"
     exit
@@ -107,7 +109,7 @@ if [ "${CONTAINERS_BKP}" = "" ]; then
         CONTAINERS_BKP=$(docker volume ls --format "{{.Name}}" --filter name=ocariot \
             | sed 's/\(psmdb-\|ocariot-\|-data\|redis-\)//g')
     else
-        CONTAINERS_BKP=$(ls backups/ \
+        CONTAINERS_BKP=$(ls ${INSTALL_PATH}/backups/ \
             | sed 's/\(psmdb-\|ocariot-\|-data\|redis-\)//g')
     fi
 fi
@@ -131,7 +133,7 @@ do
             | grep -w ${CONTAINER_NAME})
     else
         MESSAGE="Not found ${CONTAINER_NAME} volume!"
-        VOLUME_NAME=$(ls backups/ \
+        VOLUME_NAME=$(ls ${INSTALL_PATH}/backups/ \
             | grep -w ${CONTAINER_NAME})
     fi
 
@@ -150,7 +152,7 @@ then
 fi
 
 # Verifying if backup folder exist
-if [ ! $(find ./ -maxdepth 1 -name backups) ]
+if [ ! $(find ${INSTALL_PATH} -maxdepth 1 -name backups) ]
 then
     mkdir backups
 fi
@@ -161,7 +163,7 @@ then
 fi
 
 # Verifying the existence of .env file
-if [ ! $(find ./ -name .env) ]
+if [ ! $(find ${INSTALL_PATH} -name .env) ]
 then
     echo "\".env\" file not found!!!"
 
@@ -170,7 +172,7 @@ then
 fi
 
 # Executing .env to capture environment variable defined in it
-set -a && . .env && set +a
+set -a && . ${INSTALL_PATH}/.env && set +a
 
 VOLUMES=""
 VOLUMES_CACHE=""
@@ -214,10 +216,10 @@ docker run --rm \
     --name volumerize \
     ${VOLUMES} \
     ${VOLUMES_CACHE} \
-    -v $(pwd)/backups:/backup${BACKUP_VOLUME_PROPERTY} \
+    -v ${INSTALL_PATH}/backups:/backup${BACKUP_VOLUME_PROPERTY} \
     ${ENVIRONMENTS_SOURCE} \
     ${ENVIRONMENTS_TARGET} \
     blacklabelops/volumerize /bin/bash -c "${COMMAND}" \
-    && ./start.sh ocariot
+    && ${INSTALL_PATH}/scripts/start.sh
 
 rm -rf  /tmp/cache-ocariot
