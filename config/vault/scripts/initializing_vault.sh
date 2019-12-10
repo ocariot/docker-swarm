@@ -225,35 +225,6 @@ configure_rabbitmq_plugin()
     wget -qO - https://pastebin.com/raw/jNnscFJX
 }
 
-# Function responsible for generate all tokens
-# destined to all services that will realize request to Vault
-generate_tokens()
-{
-    # Reading the policies related to each service
-    local SERVICES=$(ls /etc/vault/policies/ | sed s/.hcl//g)
-
-    # Creating tokens based in its respective police
-    for SERVICE in ${SERVICES}; do
-        # Configuring time based in type token
-        # If the token is for configuration only, the time is 10 minutes.
-        # If the token is for a service that has continuous  integration with Vault, the time is 10 years.
-        TIME=${TTL_PSMDB_TOKEN}
-        if [ $(echo ${SERVICE} | grep service) ]; then
-        	TIME=${TTL_SERVICE_TOKEN}
-    	fi
-
-        # Token Generation
-        TOKEN=$(vault token create -policy=${SERVICE} \
-            -renewable=false \
-            -period=${TIME} \
-            -display-name="${SERVICE}" \
-            -field="token")
-
-        # Exporting generated token to file shared with service
-        echo "export VAULT_ACCESS_TOKEN=${TOKEN}" > "/etc/vault/tokens/access-token-${SERVICE}"
-    done
-}
-
 # Function to remove all leases entered
 # in the first parameter of the function
 revoke_leases()
@@ -313,9 +284,8 @@ configure_vault()
         # to revoke the leases previously provided
         TOKENS_TO_REVOKE=$(vault list /auth/token/accessors)
 
-        # Function responsible for generate all tokens
-        # destined to all services that will realize request to Vault
-        generate_tokens
+        echo "Token Generation Enabled"
+
 
         # Function to remove all leases entered
         # in the first parameter of the function
@@ -422,9 +392,7 @@ main()
     # that will be used in token generations
     generate_policies
 
-    # Function responsible for generate all tokens
-    # destined to all services that will realize request to Vault
-    generate_tokens
+    echo "Token Generation Enabled"
 
     # Function used to generate encryption key used to encrypt data
     # stored in its PSMDB. In addition, this function generates

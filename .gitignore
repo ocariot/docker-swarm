@@ -14,3 +14,4 @@
 *.csr
 config/vault/tokens
 config/vault/keys
+backups/

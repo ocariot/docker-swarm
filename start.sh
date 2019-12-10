@@ -97,24 +97,30 @@ fi
 
 docker stack ps $1 > /dev/null 2>&1
 
-if [ "$?" -ne 1 ]; then
-    echo "$1 stack services already initialized"
-    exit
+if [ "$?" -ne 0 ]; then
+    # General function for setting up the environment
+    # before starting services
+    configure_environment
+
+    # Verifying the existence of RabbitMQ image
+    verify_rabbitmq_image
+
+    # Cleaning all files that contain the access tokens
+    clear_tokens > /dev/null 2>&1
+
+    CERTS_CONSUL=$(ls config/consul/.certs/)
+    CERTS_VAULT=$(ls config/vault/.certs/)
+
+    if [ "${CERTS_CONSUL}" = "" ] || [ "${CERTS_VAULT}" = "" ];
+    then
+        # Creating server certificates for consul and client
+        # certificates for VAULT access to CONSUL through SSL/TLS
+        config/consul/create-consul-and-vault-certs.sh > /dev/null 2>&1
+    fi
+
 fi
 
-# General function for setting up the environment
-# before starting services
-configure_environment
-
-# Verifying the existence of RabbitMQ image
-verify_rabbitmq_image
-
-# Cleaning all files that contain the access tokens
-clear_tokens > /dev/null 2>&1
-
-# Creating server certificates for consul and client
-# certificates for VAULT access to CONSUL through SSL/TLS
-config/consul/create-consul-and-vault-certs.sh > /dev/null 2>&1
+./service_monitor.sh > /dev/null &
 
 # Executing the services in mode swarm defined in docker-compose.yml file
 docker stack deploy -c docker-compose.yml $1
