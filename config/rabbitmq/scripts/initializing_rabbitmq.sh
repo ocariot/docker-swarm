@@ -73,9 +73,6 @@ get_certificates()
 
     done
 
-    # Creating folder where all certificates will be placed
-    mkdir /etc/.certs
-
     # Processing and placing CA certificate for /etc/.certs/ca.crt
     echo -e $(jq '.data.issuing_ca' /tmp/certificates.json | sed 's/"//g') > /etc/.certs/ca.crt
 

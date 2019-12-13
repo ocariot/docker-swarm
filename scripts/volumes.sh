@@ -2,64 +2,7 @@
 
 INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
 
-help()
-{
-    echo -e "Illegal number of parameters. \nExample Usage: \n\t sudo ./make_backup.sh <PARAMETER> <OPTION>"
-    echo -e "<PARAMETER>: \n \t backup | restore: operation to be realize.\
-             \n<OPTION>: \n \t --name <[list of volume name]>: specific volume used by the services."
-    exit
-}
-
-restart_stack()
-{
-    mkdir ${INSTALL_PATH}/config/vault/tokens 2> /dev/null
-
-    # creating the files that will be used to share
-    # the vault access token
-    FILES_TOKEN=$(ls ${INSTALL_PATH}/config/vault/policies/ | sed "s/.hcl//g")
-    for FILE_TOKEN in ${FILES_TOKEN}; do
-        touch ${INSTALL_PATH}/config/vault/tokens/access-token-${FILE_TOKEN}
-        if [ $? -ne 0 ]
-        then
-            exit
-        fi
-    done
-
-    docker stack deploy -c docker-compose.yml $1
-}
-
-stop_service()
-{
-    # Verifying if the services was removed
-    echo "Stoping service: $1"
-    RET=1
-    while [[ $RET -ne 0 ]]; do
-        RET=$(docker service ls --filter "name=$1" | tail -n +2 | wc -l)
-    done
-}
-
-remove_volumes()
-{
-    for VOLUME_NAME in $1; do
-
-        VOLUME=$(docker volume ls --filter "name=${VOLUME_NAME}" --format {{.Name}})
-
-        if [ ! ${VOLUME} ];
-        then
-            continue
-        fi
-
-        RET=1
-        printf "Removing Volume: ${VOLUME_NAME}"
-        while [[ ${RET} -ne 0 ]]
-        do
-            printf "."
-            docker volume rm ${VOLUME_NAME} -f &> /dev/null
-            RET=$?
-        done
-        printf "\n"
-    done
-}
+source ${INSTALL_PATH}/scripts/functions.sh
 
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-name|\-\-time).*" -v | grep '\-\-')
 
@@ -162,25 +105,9 @@ then
     mkdir /tmp/cache-ocariot
 fi
 
-# Verifying the existence of .env file
-if [ ! $(find ${INSTALL_PATH} -name .env) ]
-then
-    echo "\".env\" file not found!!!"
+set_variables_environment
 
-    # Finishing the script execution
-    exit
-fi
-
-# Executing .env to capture environment variable defined in it
-set -a && . ${INSTALL_PATH}/.env && set +a
-
-VOLUMES=""
-VOLUMES_CACHE=""
-ENVIRONMENTS_SOURCE=""
-ENVIRONMENTS_TARGET=""
-ENVIRONMENTS_CACHE=""
 INCREMENT=1
-
 for VOLUME in ${VOLUMES_BKP};
 do
     VOLUMES="${VOLUMES} -v ${VOLUME}:/source/${VOLUME}${SOURCE_VOLUME_PROPERTY}"

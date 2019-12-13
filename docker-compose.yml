@@ -27,6 +27,12 @@ services:
       - source: ocariot-init-vault-config
         target: /usr/bin/initializing_vault.sh
         mode: 0750
+      - source: ocariot-create-token-vault-config
+        target: /etc/vault/scripts/create_tokens.sh
+        mode: 0750
+      - source: ocariot-remove-token-vault-config
+        target: /etc/vault/scripts/remove_tokens.sh
+        mode: 0750
     ports:
       - ${VAULT_PORT}:8200
     secrets:
@@ -695,6 +701,10 @@ configs:
     file: config/rabbitmq/enabled_plugins
   ocariot-mongo-config:
     file: config/psmdb/mongod.conf
+  ocariot-create-token-vault-config:
+    file: config/vault/scripts/create_tokens.sh
+  ocariot-remove-token-vault-config:
+    file: config/vault/scripts/remove_tokens.sh
   ocariot-init-vault-config:
     file: config/vault/scripts/initializing_vault.sh
   ocariot-init-rabbitmq-config:

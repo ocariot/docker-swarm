@@ -10,8 +10,41 @@ TTL_SERVICE_TOKEN="87600h"
 # Function to unseal vault
 unseal()
 {
-# Using the first three keys to unlock the vault
-awk 'NR <= 3{system("vault operator unseal "$4)}' /etc/vault/keys > /dev/null
+    # Using the first three keys to unlock the vault
+    KEYS=$(cat /etc/vault/keys)
+    ID_KEY=$(( ( RANDOM % 5 )  + 1 ))
+    USED_KEYS=0
+    while [[ ${USED_KEYS} != 3 ]]
+    do
+        KEY=$(echo "${KEYS}" | awk NR==${ID_KEY}'{print $4}')
+
+        vault operator unseal "${KEY}" &> /dev/null
+
+        if [ $? != 0 ];then
+            echo "Invalid key to unseal vault. Key: ${KEY}"
+            exit
+        fi
+
+        KEYS=$(echo "${KEYS}" | sed "${ID_KEY}d")
+        USED_KEYS=$(( ${USED_KEYS} + 1))
+        ID_KEY=$(( ( RANDOM % (5 - USED_KEYS) )  + 1 ))
+    done
+
+    echo "Vault unseal with success!"
+}
+
+# Authenticating user with root access token
+root_user_authentication()
+{
+    TOKEN=$(awk 'NR == 6{print $4}' /etc/vault/keys)
+
+    vault login ${TOKEN} &> /dev/null
+    if [ $? != 0 ];then
+        echo "Invalid root token. Token: ${TOKEN}"
+        exit
+    fi
+
+    echo "Root user authenticate with success!"
 }
 
 # Function to check if vault was initialized
@@ -20,7 +53,7 @@ check_vault()
     # Waiting for Vault to boot
     local RET=1
     while [[ $RET -ne 0 ]]; do
-        echo "=> Waiting for confirmation of Vault service startup..."
+        echo "=> Waiting for confirmation of Vault service startup"
         sleep 2
         $(nc -vz ${HOSTNAME} 8200) 2> /dev/null
         RET=$?
@@ -33,7 +66,7 @@ check_ha_mode()
     # Waiting for HA Mode is active in Vault
     local HA_MODE="standby"
     while [[ $HA_MODE != "active" ]]; do
-        echo "=> Waiting Vault confirm the HA Mode Consul service startup..."
+        echo "=> Waiting Vault confirm the HA Mode Consul service startup"
         sleep 2
         HA_MODE=$(vault status | grep "HA Mode" | awk '{print $3}')
     done
@@ -45,7 +78,7 @@ check_consul()
     # Waiting for Consul to boot
     local RET=1
     while [[ $RET -ne 0 ]]; do
-        echo "=> Waiting for confirmation of Consul service startup..."
+        echo "=> Waiting for confirmation of Consul service startup"
         $(nc -vz consul 8501) 2> /dev/null
         RET=$?
         sleep 2
@@ -58,7 +91,7 @@ check_rabbitmq()
     # Waiting for RabbitMQ to boot
     local RET=1
     while [[ $RET -ne 0 ]]; do
-        echo "=> Waiting for confirmation of RabbitMQ service startup..."
+        echo "=> Waiting for confirmation of RabbitMQ service startup"
         $(nc -vz $(echo ${RABBITMQ_MGT_BASE_URL} | grep -oE '[^/]*$') ${RABBITMQ_MGT_PORT}) 2> /dev/null
         RET=$?
         sleep 2
@@ -73,7 +106,7 @@ check_psmdbs()
     # Awaiting PSDB initialization specified in the first parameter
     RET=1
     while [[ $RET -ne 0 ]]; do
-        echo "=> Waiting for confirmation of $1 service startup..."
+        echo "=> Waiting for confirmation of $1 service startup"
         $(nc -vz $1 27017) 2> /dev/null
         RET=$?
         sleep 2
@@ -119,7 +152,7 @@ configure_psmdb_plugin()
     # Trying establish connection with actual PSMDB
     local RET=1
     while [[ $RET -ne 0 ]]; do
-        echo "=> Waiting to enable database plugin for $1 service..."
+        echo "=> Waiting to enable database plugin for $1 service"
         vault write database/config/$1 \
                 plugin_name=mongodb-database-plugin \
                 allowed_roles=${DB}-service \
@@ -208,7 +241,7 @@ configure_rabbitmq_plugin()
     # Trying establish connection with RabbitMQ Management
     local RET=1
     while [[ $RET -ne 0 ]]; do
-        echo "=> Waiting to enable plugin for rabbitmq service..."
+        echo "=> Waiting to enable plugin for rabbitmq service"
         vault write rabbitmq/config/connection \
             connection_uri="${RABBITMQ_MGT_BASE_URL}:${RABBITMQ_MGT_PORT}" \
             username=${USER} \
@@ -273,7 +306,7 @@ configure_vault()
         check_ha_mode
 
         # Authenticating user with root access token
-        awk 'NR == 6{system("vault login "$4)}' /etc/vault/keys > /dev/null
+        root_user_authentication
 
         # Function used to add a Vault CA certificate to the system, with
         # this CA certificate Vault becomes trusted.
@@ -310,7 +343,7 @@ configure_vault()
     check_ha_mode
 
     # Authenticating user with root access token
-    awk 'NR == 6{system("vault login "$4)}' /etc/vault/keys > /dev/null
+    root_user_authentication
 
     # Enabling secrets enrollment in Vault
     vault secrets enable -path=secret/ kv-v2

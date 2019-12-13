@@ -2,61 +2,56 @@
 
 INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
 
+source ${INSTALL_PATH}/scripts/functions.sh
+
 STACK_NAME="ocariot"
 
-clear_volumes()
-{
-    grep -P '(?<=ocariot-).*(?=-data)' ${INSTALL_PATH}/docker-compose.yml \
-     | sed 's/\( \|name:\)//g' \
-     | awk '{system("docker volume rm -f "$1)}'
-}
+VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-name|\-\-clear\-volumes).*" -v | grep '\-\-')
 
-help()
-{
-    echo -e "Illegal number of parameters. \nExample Usage: \n\t sudo ./stop <STACK_NAME> <OPTION>"
-    echo -e "<OPTION>: \n \t -clear-volumes: remove all volume used by the services"
-    exit
-}
+CHECK_NAME_PARAMETER=$(echo $@ | grep -wo '\-\-name')
+CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--name ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
 
-docker stack ps ${STACK_NAME} > /dev/null 2>&1
+CHECK_CLEAR_VOLUMES_PARAMETER=$(echo $@ | grep -wo '\-\-clear\-volumes')
+CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/--.*//g')
 
-if [ "$?" -ne 0 ]; then
-    echo "$1 stack services not initialized"
-    exit
-fi
+if ([ "$1" != "--name" ] && [ "$1" != "--clear-volumes" ] && [ "$1" != "" ]) \
+    || [ ${VALIDATING_OPTIONS} ] \
+    || ([ ${CHECK_NAME_PARAMETER} ] && [ "${CONTAINERS_BKP}" = "" ]) \
+    || ([ ${CHECK_CLEAR_VOLUMES_PARAMETER} ] && [ "$(echo ${CLEAR_VOLUMES_VALUE} | wc -w)" != 0 ]); then
 
-if [ "$#" -gt 1 ]; then
     help
 fi
 
-if [ "$#" -eq 1 ] && [ "$1" != "-clear-volumes" ]; then
-    help
-fi
+for CONTAINER_NAME in ${CONTAINERS_BKP};
+do
+    SERVICE_NAME=$(docker service ls \
+        --filter name=ocariot \
+        --format "{{.Name}}" \
+        | grep -w ocariot_.*${CONTAINER_NAME})
 
-# Stopping the ocariot stack services  that being run
-docker stack rm ${STACK_NAME} > /dev/null 2>&1
-
-# Verifying if the services was removed
-printf "Stoping services"
-RET=0
-while [[ $RET -eq 0 ]]; do
-    docker stack ps ${STACK_NAME} > /dev/null 2>&1
-    RET=$?
-    sleep 3
-    printf "."
+    if [ ! "${SERVICE_NAME}" ]; then
+        echo "Service ${CONTAINER_NAME} not found!"
+        exit
+    fi
+    RUNNING_SERVICES="${RUNNING_SERVICES} ${SERVICE_NAME}"
 done
-printf "\n"
 
-ps aux \
-    | grep -w service_monitor.sh \
-    | sed '/grep/d' \
-    | awk '{system("kill -9 "$2)}'
+REMOVE_STACK=false
+if [ "${CONTAINERS_BKP}" = "" ];
+then
+    RUNNING_SERVICES=$(docker stack ps ocariot --format {{.Name}} | sed 's/\..*//g')
+    REMOVE_STACK=true
+fi
 
-rm ${INSTALL_PATH}/config/vault/.certs/* -f
-rm ${INSTALL_PATH}/config/consul/.certs/* -f
+if ${REMOVE_STACK}; then
+    remove_stack
+    clear_environment
+else
+    remove_services "${RUNNING_SERVICES}"
+fi
 
 # If "-clear-volumes" parameter was passed the
 # volumes will be excluded
-if [ "$1" = "-clear-volumes" ];then
-    clear_volumes > /dev/null
+if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
+    clear_volumes "${CONTAINERS_BKP}" &> /dev/null
 fi
