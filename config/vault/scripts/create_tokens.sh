@@ -53,5 +53,5 @@ then
     echo "${SERVICE_NAME} ${ACCESSOR}" >> ${ACCESSOR_TOKEN_FILE}
 
     # Exporting generated token to file shared withTOKENS_TO_REVOKE service
-    echo "export VAULT_ACCESS_TOKEN=${TOKEN}" > "/etc/vault/tokens/access-token-${SERVICE}"
+    echo "export VAULT_ACCESS_TOKEN=${TOKEN}" > "/etc/vault/.tokens/access-token-${SERVICE}"
 fi

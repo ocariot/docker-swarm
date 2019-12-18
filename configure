@@ -5,7 +5,7 @@ isInstalled()
     ls /usr/local/bin/ocariot  &> /dev/null
     RET_OCARIOT_COMMAND=$?
 
-    RET_CRONTAB_COMMAND=$(crontab -u ${SUDO_USER} -l | grep -w "${BKP_COMMAND}\|${MONITOR_COMMAND}")
+    RET_CRONTAB_COMMAND=$(crontab -u ${SUDO_USER} -l | grep -w "${MONITOR_COMMAND}")
 
     if [ "${RET_CRONTAB_COMMAND}" ] && [ ${RET_OCARIOT_COMMAND} = 0 ]; then
         echo "true"
@@ -32,15 +32,14 @@ if ([ "$1" != "--clear" ] && [ "$1" != "" ]) \
     exit
 fi
 
-BKP_COMMAND="ocariot backup"
 MONITOR_COMMAND="service_monitor.sh"
 
 if [ $# = 1 ];then
     sudo rm -f /usr/local/bin/ocariot
-    ( crontab -u ${SUDO_USER} -l | sed "/${BKP_COMMAND}\|${MONITOR_COMMAND}/d"; ) | crontab -u ${SUDO_USER} -
+    ( crontab -u ${SUDO_USER} -l | sed "/${MONITOR_COMMAND}/d"; ) | crontab -u ${SUDO_USER} -
 
     RET=$(! ls /usr/local/bin/ocariot  &> /dev/null && \
-        crontab -u ${SUDO_USER} -l | grep -w "${BKP_COMMAND}\|${MONITOR_COMMAND}")
+        crontab -u ${SUDO_USER} -l | grep -w "${MONITOR_COMMAND}")
 
     STATUS=$(isInstalled)
     if ! ${STATUS}; then
@@ -65,10 +64,9 @@ if [ ! "$(find /usr/local/bin -maxdepth 1 -name ocariot)" ]; then
     sudo chmod +x /usr/local/bin/ocariot
 fi
 
-CRONTAB_COMMANDS=$(echo -e "@reboot ${INSTALL_PATH}/scripts/${MONITOR_COMMAND} >> /tmp/ocariot_monitor_service.log &\n\
-0 3 * * * ${INSTALL_PATH}/${BKP_COMMAND} >> /tmp/ocariot_backup.log")
+CRONTAB_COMMAND=$(echo -e "@reboot ${INSTALL_PATH}/scripts/${MONITOR_COMMAND} >> /tmp/ocariot_monitor_service.log &")
 
-( crontab -u ${SUDO_USER} -l; echo "${CRONTAB_COMMANDS}" ) | crontab -u ${SUDO_USER} -
+( crontab -u ${SUDO_USER} -l; echo "${CRONTAB_COMMAND}" ) | crontab -u ${SUDO_USER} -
 
 STATUS=$(isInstalled)
 if ${STATUS}; then

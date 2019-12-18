@@ -29,9 +29,7 @@ add_user()
     while [ $RET -ne 0 ]
     do
         echo "=> Waiting for confirmation of RabbitMQ service startup..."
-        # The attempts are realized in each 2 seconds
-        sleep 2
-        rabbitmqctl await_startup
+        rabbitmqctl await_startup --timeout 20
         RET=$?
     done
 

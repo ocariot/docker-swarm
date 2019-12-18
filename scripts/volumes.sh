@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 
+check_crontab()
+{
+    RET_CRONTAB_COMMAND=$(crontab -u ${USER} -l | grep -F "$1")
+
+    if [ "${RET_CRONTAB_COMMAND}" ]; then
+        echo "enable"
+    else
+        echo "disable"
+    fi
+}
+
 INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
 
 source ${INSTALL_PATH}/scripts/functions.sh
 
-VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-name|\-\-time).*" -v | grep '\-\-')
+VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-name|\-\-time|\-\-expression).*" -v | grep '\-\-')
 
 CHECK_NAME_PARAMETER=$(echo $@ | grep -wo '\-\-name')
 CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--name ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
@@ -12,11 +23,15 @@ CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--name ).*' | sed "s/--.*//g;s/vault/
 CHECK_TIME_PARAMETER=$(echo $@ | grep -wo '\-\-time')
 RESTORE_TIME=$(echo $@ | grep -o -P '(?<=--time ).*' | sed 's/--.*//g')
 
+CHECK_AUTO_BKP_PARAMETER=$(echo $@ | grep -wo '\-\-expression')
+EXPRESSION_BKP=$(echo "$@" | grep -o -P '(?<=--expression).*' | sed 's/--.*//g')
+
 if ([ "$1" != "backup" ] && [ "$1" != "restore" ]) \
-    || ([ "$2" != "--name" ] && [ "$2" != "--time" ] && [ "$2" != "" ]) \
+    || ([ "$2" != "--name" ] && [ "$2" != "--time" ] && [ "$2" != "--expression" ] && [ "$2" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \
     || ([ ${CHECK_NAME_PARAMETER} ] && [ "${CONTAINERS_BKP}" = "" ]) \
     || ([ ${CHECK_TIME_PARAMETER} ] && [ "$(echo ${RESTORE_TIME} | wc -w)" != 1 ]); then
+    echo here
     help
 fi
 
@@ -34,6 +49,37 @@ if [ "$1" = "restore" ]; then
     COMMAND="restore ${RESTORE_TIME}"
     BACKUP_VOLUME_PROPERTY=":ro"
     SOURCE_VOLUME_PROPERTY=""
+fi
+
+if ([ ${COMMAND} = "backup" ] && [ ${CHECK_TIME_PARAMETER} ]) \
+    || ([ ${COMMAND} = "restore" ] && [ ${CHECK_AUTO_BKP_PARAMETER} ]);then
+    help
+fi
+
+if [ ${CHECK_AUTO_BKP_PARAMETER} ];then
+    if [ ! "${EXPRESSION_BKP}" ];then
+        EXPRESSION_BKP="0 3 * * *"
+    fi
+
+    CRONTAB_COMMAND="${EXPRESSION_BKP} ${INSTALL_PATH}/ocariot ${COMMAND} ${CONTAINERS_BKP} >> /tmp/ocariot_backup.log"
+
+    STATUS=$(check_crontab "${CRONTAB_COMMAND}")
+
+    if [ "${STATUS}" = "enable" ];then
+        echo "Backup is already scheduled"
+        exit
+    fi
+    ( crontab -u ${USER} -l; echo "${CRONTAB_COMMAND}" ) | crontab -u ${USER} -
+
+    STATUS=$(check_crontab "${CRONTAB_COMMAND}")
+
+    if [ "${STATUS}" = "enable" ];then
+        echo "Backup schedule successful!"
+    else
+        echo "Unsuccessful backup schedule!"
+    fi
+
+    exit
 fi
 
 VOLUMES_BKP=""

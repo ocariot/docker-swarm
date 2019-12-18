@@ -10,7 +10,17 @@ case $1 in
 		COMMAND="/scripts/stop.sh $(echo $@ | sed "s/$1//g")"
 		;;
 	backup)
-		COMMAND="/scripts/volumes.sh $@"
+        PARAMETERS=$@
+        EXPRESSION_BKP="$(echo "$@" | grep -o -P '(?<=--expression ).*' | sed 's/--.*//g')"
+
+        if [ "${EXPRESSION_BKP}" ];then
+            PARAMETERS="$(echo -e "$@" \
+                | sed 's/\-\-/\n\-\-/g' \
+                | sed '/expression/d' \
+                | sed -z 's/\n//g') --expression \"${EXPRESSION_BKP}\""
+        fi
+
+		COMMAND="/scripts/volumes.sh ${PARAMETERS}"
 		;;
 	restore)
 		COMMAND="/scripts/volumes.sh $@"
@@ -24,4 +34,4 @@ case $1 in
 		;;
 esac
 
-${INSTALL_PATH}${COMMAND}
+bash -c "${INSTALL_PATH}${COMMAND}"

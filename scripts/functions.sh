@@ -74,13 +74,13 @@ configure_environment()
 {
     set_variables_environment
 
-    mkdir config/vault/tokens 2> /dev/null
+    mkdir config/vault/.tokens 2> /dev/null
 
     # creating the files that will be used to share
     # the vault access token
     FILES_TOKEN=$(ls ${INSTALL_PATH}/config/vault/policies/ | sed "s/.hcl//g")
     for FILE_TOKEN in ${FILES_TOKEN}; do
-        touch ${INSTALL_PATH}/config/vault/tokens/access-token-${FILE_TOKEN}
+        touch ${INSTALL_PATH}/config/vault/.tokens/access-token-${FILE_TOKEN}
         if [ $? -ne 0 ]
         then
             exit
@@ -89,7 +89,7 @@ configure_environment()
 
     # creating the file where the root token will be
     # stored, along with the encryption keys
-    touch ${INSTALL_PATH}/config/vault/keys
+    touch ${INSTALL_PATH}/config/vault/.keys
 }
 
 # Creating RabbitMQ image
@@ -203,7 +203,8 @@ help()
                          \n \t\t restore: operation to be realize.\
              \n\t\e[1m<option>\e[0m: \n \t\t --name <[list of container name]>: specific volume used by the services.\
                          \n \t\t --clear-volumes <[list of volume name]>: specific volume used by the services.\
-                         \n \t\t --time <[list of volume name]>: specific volume used by the services."
+                         \n \t\t --time <[list of volume name]>: specific volume used by the services. \
+                         \n \t\t --expression <[list of volume name]>: specific volume used by the services."
     exit 1
 }
 

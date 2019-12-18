@@ -11,7 +11,7 @@ TTL_SERVICE_TOKEN="87600h"
 unseal()
 {
     # Using the first three keys to unlock the vault
-    KEYS=$(cat /etc/vault/keys)
+    KEYS=$(cat /etc/vault/.keys)
     ID_KEY=$(( ( RANDOM % 5 )  + 1 ))
     USED_KEYS=0
     while [[ ${USED_KEYS} != 3 ]]
@@ -36,7 +36,7 @@ unseal()
 # Authenticating user with root access token
 root_user_authentication()
 {
-    TOKEN=$(awk 'NR == 6{print $4}' /etc/vault/keys)
+    TOKEN=$(awk 'NR == 6{print $4}' /etc/vault/.keys)
 
     vault login ${TOKEN} &> /dev/null
     if [ $? != 0 ];then
@@ -197,6 +197,13 @@ configure_psmdbs()
 
         # Saving the user and password generated as a secret in Vault
         vault kv put secret/${DATABASE}/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
+    done
+
+    for DATABASE in ${DATABASES}; do
+        # Defining user name based in PSMDB name
+        local USER=$(vault kv get -field="user" secret/${DATABASE}/credential)
+        # Generate password for admin user
+        local PASSWD=$(vault kv get -field="passwd" secret/${DATABASE}/credential)
 
         # Function responsible to establish the plugin
         # connection and create a role for respective PSMDB
@@ -334,7 +341,7 @@ configure_vault()
     echo "Not previously initialized"
 
     # Activating the vault and generating unlock keys and root token
-    vault operator init -format="table" | grep -E "Unseal Key|Initial Root Token" > /etc/vault/keys
+    vault operator init -format="table" | grep -E "Unseal Key|Initial Root Token" > /etc/vault/.keys
 
     # Function to unseal vault
     unseal

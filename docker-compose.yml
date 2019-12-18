@@ -17,9 +17,9 @@ services:
       - VAULT_ADDR=https://localhost:8200
       - VAULT_SKIP_VERIFY=true
     volumes:
-      - "./config/vault/keys:/etc/vault/keys"
+      - "./config/vault/.keys:/etc/vault/.keys"
       - "./config/vault/policies:/etc/vault/policies/"
-      - "./config/vault/tokens:/etc/vault/tokens/"
+      - "./config/vault/.tokens:/etc/vault/.tokens/"
     command: initializing_vault.sh
     configs:
       - source: ocariot-vault-config
@@ -111,7 +111,7 @@ services:
       - VAULT_PORT=${VAULT_PORT}
     volumes:
       - "psmdb-account-data:/data/db"
-      - "./config/vault/tokens/access-token-psmdb-account:/tmp/access-token-psmdb-account"
+      - "./config/vault/.tokens/access-token-psmdb-account:/tmp/access-token-psmdb-account"
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
@@ -145,7 +145,7 @@ services:
       - VAULT_PORT=${VAULT_PORT}
     volumes:
       - "psmdb-iot-tracking-data:/data/db"
-      - "./config/vault/tokens/access-token-psmdb-iot-tracking:/tmp/access-token-psmdb-iot-tracking"
+      - "./config/vault/.tokens/access-token-psmdb-iot-tracking:/tmp/access-token-psmdb-iot-tracking"
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
@@ -179,7 +179,7 @@ services:
       - VAULT_PORT=${VAULT_PORT}
     volumes:
       - "psmdb-ds-agent-data:/data/db"
-      - "./config/vault/tokens/access-token-psmdb-ds-agent:/tmp/access-token-psmdb-ds-agent"
+      - "./config/vault/.tokens/access-token-psmdb-ds-agent:/tmp/access-token-psmdb-ds-agent"
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
@@ -213,7 +213,7 @@ services:
       - VAULT_PORT=${VAULT_PORT}
     volumes:
       - "psmdb-quest-data:/data/db"
-      - "./config/vault/tokens/access-token-psmdb-quest:/tmp/access-token-psmdb-quest"
+      - "./config/vault/.tokens/access-token-psmdb-quest:/tmp/access-token-psmdb-quest"
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
@@ -247,7 +247,7 @@ services:
       - VAULT_PORT=${VAULT_PORT}
     volumes:
       - "psmdb-gamification-data:/data/db"
-      - "./config/vault/tokens/access-token-psmdb-gamification:/tmp/access-token-psmdb-gamification"
+      - "./config/vault/.tokens/access-token-psmdb-gamification:/tmp/access-token-psmdb-gamification"
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
@@ -281,7 +281,7 @@ services:
       - VAULT_PORT=${VAULT_PORT}
     volumes:
       - "psmdb-food-data:/data/db"
-      - "./config/vault/tokens/access-token-psmdb-food:/tmp/access-token-psmdb-food"
+      - "./config/vault/.tokens/access-token-psmdb-food:/tmp/access-token-psmdb-food"
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
@@ -367,7 +367,7 @@ services:
       - HOST_REDIS=redis-api-gateway
     command: initializing_api_gateway.sh
     volumes:
-      - "./config/vault/tokens/access-token-api-gateway-service:/tmp/access-token-api-gateway-service"
+      - "./config/vault/.tokens/access-token-api-gateway-service:/tmp/access-token-api-gateway-service"
     ports:
       - ${AG_PORT_HTTP}:8080
       - ${AG_PORT_HTTPS}:8081
@@ -412,7 +412,7 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
-      - "./config/vault/tokens/access-token-account-service:/tmp/access-token-account-service"
+      - "./config/vault/.tokens/access-token-account-service:/tmp/access-token-account-service"
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
@@ -447,7 +447,7 @@ services:
       - PORT_HTTP=4000
       - PORT_HTTPS=4001
     volumes:
-      - "./config/vault/tokens/access-token-iot-tracking-service:/tmp/access-token-iot-tracking-service"
+      - "./config/vault/.tokens/access-token-iot-tracking-service:/tmp/access-token-iot-tracking-service"
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
@@ -488,7 +488,7 @@ services:
       - EXPRESSION_AUTO_SYNC=${EXPRESSION_AUTO_SYNC}
       - REDIS_URI=redis://redis-ds-agent:6379
     volumes:
-      - "./config/vault/tokens/access-token-ds-agent-service:/tmp/access-token-ds-agent-service"
+      - "./config/vault/.tokens/access-token-ds-agent-service:/tmp/access-token-ds-agent-service"
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
@@ -524,7 +524,7 @@ services:
       - PROTOCOL=https
       - PORT=6001
     volumes:
-      - "./config/vault/tokens/access-token-quest-service:/tmp/access-token-quest-service"
+      - "./config/vault/.tokens/access-token-quest-service:/tmp/access-token-quest-service"
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
@@ -559,7 +559,7 @@ services:
       - PROTOCOL=https
       - PORT=7001
     volumes:
-      - "./config/vault/tokens/access-token-gamification-service:/tmp/access-token-gamification-service"
+      - "./config/vault/.tokens/access-token-gamification-service:/tmp/access-token-gamification-service"
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
@@ -594,7 +594,7 @@ services:
       - PROTOCOL=https
       - PORT=8001
     volumes:
-      - "./config/vault/tokens/access-token-food-service:/tmp/access-token-food-service"
+      - "./config/vault/.tokens/access-token-food-service:/tmp/access-token-food-service"
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
@@ -628,7 +628,7 @@ services:
       - VAULT_PORT=${VAULT_PORT}
     entrypoint: initializing_rabbitmq.sh
     volumes:
-      - "./config/vault/tokens/access-token-rabbitmq:/tmp/access-token-rabbitmq"
+      - "./config/vault/.tokens/access-token-rabbitmq:/tmp/access-token-rabbitmq"
       - "rabbitmq-data:/var/lib/rabbitmq"
     configs:
       - source: ocariot-init-rabbitmq-config
