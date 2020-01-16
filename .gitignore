@@ -12,6 +12,6 @@
 *.crt
 *.key
 *.csr
-config/vault/.tokens
-config/vault/.keys
+config/ocariot/vault/.tokens
+config/ocariot/vault/.keys
 backups/

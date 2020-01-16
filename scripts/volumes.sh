@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+INSTALL_PATH="/opt/docker-swarm"
+source ${INSTALL_PATH}/scripts/general_functions.sh
+
 check_crontab()
 {
     RET_CRONTAB_COMMAND=$(crontab -u ${USER} -l | grep -F "$1")
@@ -11,14 +14,43 @@ check_crontab()
     fi
 }
 
-INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+stop_service()
+{
+    # Verifying if the services was removed
+    echo "Stoping service: $1"
+    RET=1
+    while [[ $RET -ne 0 ]]; do
+        RET=$(docker service ls --filter "name=$1" | tail -n +2 | wc -l)
+    done
+}
 
-source ${INSTALL_PATH}/scripts/functions.sh
+remove_volumes()
+{
+    for VOLUME_NAME in $1; do
 
-VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-name|\-\-time|\-\-expression).*" -v | grep '\-\-')
+        VOLUME=$(docker volume ls --filter "name=${VOLUME_NAME}" --format {{.Name}})
 
-CHECK_NAME_PARAMETER=$(echo $@ | grep -wo '\-\-name')
-CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--name ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
+        if [ ! ${VOLUME} ];
+        then
+            continue
+        fi
+
+        RET=1
+        printf "Removing Volume: ${VOLUME_NAME}"
+        while [[ ${RET} -ne 0 ]]
+        do
+            printf "."
+            docker volume rm ${VOLUME_NAME} -f &> /dev/null
+            RET=$?
+        done
+        printf "\n"
+    done
+}
+
+VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-service|\-\-time|\-\-expression).*" -v | grep '\-\-')
+
+CHECK_NAME_PARAMETER=$(echo $@ | grep -wo '\-\-service')
+CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--service ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
 
 CHECK_TIME_PARAMETER=$(echo $@ | grep -wo '\-\-time')
 RESTORE_TIME=$(echo $@ | grep -o -P '(?<=--time ).*' | sed 's/--.*//g')
@@ -27,11 +59,11 @@ CHECK_AUTO_BKP_PARAMETER=$(echo $@ | grep -wo '\-\-expression')
 EXPRESSION_BKP=$(echo "$@" | grep -o -P '(?<=--expression).*' | sed 's/--.*//g')
 
 if ([ "$1" != "backup" ] && [ "$1" != "restore" ]) \
-    || ([ "$2" != "--name" ] && [ "$2" != "--time" ] && [ "$2" != "--expression" ] && [ "$2" != "" ]) \
+    || ([ "$2" != "--service" ] && [ "$2" != "--time" ] && [ "$2" != "--expression" ] && [ "$2" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \
     || ([ ${CHECK_NAME_PARAMETER} ] && [ "${CONTAINERS_BKP}" = "" ]) \
+    || ([ ${CHECK_AUTO_BKP_PARAMETER} ] && [ "${EXPRESSION_BKP}" = "" ]) \
     || ([ ${CHECK_TIME_PARAMETER} ] && [ "$(echo ${RESTORE_TIME} | wc -w)" != 1 ]); then
-    echo here
     help
 fi
 
@@ -57,9 +89,6 @@ if ([ ${COMMAND} = "backup" ] && [ ${CHECK_TIME_PARAMETER} ]) \
 fi
 
 if [ ${CHECK_AUTO_BKP_PARAMETER} ];then
-    if [ ! "${EXPRESSION_BKP}" ];then
-        EXPRESSION_BKP="0 3 * * *"
-    fi
 
     CRONTAB_COMMAND="${EXPRESSION_BKP} ${INSTALL_PATH}/ocariot ${COMMAND} ${CONTAINERS_BKP} >> /tmp/ocariot_backup.log"
 

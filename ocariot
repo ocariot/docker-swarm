@@ -3,7 +3,7 @@
 INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
 
 case $1 in
-    start)
+  start)
 		COMMAND="/scripts/start.sh $(echo $@ | sed "s/$1//g")"
 		;;
 	stop)
@@ -25,8 +25,15 @@ case $1 in
 	restore)
 		COMMAND="/scripts/volumes.sh $@"
 		;;
-    update)
+  update)
 		COMMAND="/scripts/update.sh $(echo $@ | sed "s/$1//g")"
+		;;
+  monitor)
+		COMMAND="/scripts/monitor.sh $(echo $@ | sed "s/$1//g")"
+		;;
+	edit-env)
+		vi ${INSTALL_PATH}/.env_test
+		exit
 		;;
 	*)
 		echo "Sorry, I don't understand"

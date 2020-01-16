@@ -1,30 +1,29 @@
 #!/usr/bin/env bash
 
-INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
-
-source ${INSTALL_PATH}/scripts/functions.sh
+INSTALL_PATH="/opt/docker-swarm"
+source ${INSTALL_PATH}/scripts/general_functions.sh
 
 VERSION="latest"
 
 STACK_NAME="ocariot"
 
-VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-name).*" -v | grep '\-\-')
+VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-service).*" -v | grep '\-\-')
 
-CHECK_NAME_PARAMETER=$(echo $@ | grep -wo '\-\-name')
-CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--name ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
+CHECK_SERVICE_PARAMETER=$(echo $@ | grep -wo '\-\-service')
+SERVICES=$(echo $@ | grep -o -P '(?<=--service ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
 
 CHECK_CLEAR_VOLUMES_PARAMETER=$(echo $@ | grep -wo '\-\-clear\-volumes')
 CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/--.*//g')
 
-if ([ "$1" != "--name" ] && [ "$1" != "" ]) \
+if ([ "$1" != "--service" ] && [ "$1" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \
-    || ([ ${CHECK_NAME_PARAMETER} ] && [ "${CONTAINERS_BKP}" = "" ]); then
+    || ([ ${CHECK_SERVICE_PARAMETER} ] && [ "${SERVICES}" = "" ]); then
 
     help
 fi
 set_variables_environment
 
-if [ "${CONTAINERS_BKP}" = "" ];
+if [ "${SERVICES}" = "" ];
 then
     RUNNING_SERVICES=$(docker stack ps ocariot --format {{.Name}} | sed 's/\..*//g')
     IMAGES="${IMAGES_NAME} $(docker image ls \
@@ -33,7 +32,7 @@ then
         | grep ocariot/)"
 fi
 
-for CONTAINER_NAME in ${CONTAINERS_BKP};
+for CONTAINER_NAME in ${SERVICES};
 do
     SERVICE_NAME=$(docker service ls \
         --filter name=ocariot \

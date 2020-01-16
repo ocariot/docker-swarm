@@ -1,8 +1,31 @@
 #!/usr/bin/env bash
 
-INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+check_vault()
+{
+    RESULT=$(docker service logs ocariot_vault 2> /dev/null | grep -c "Token Generation Enabled")
+    echo ${RESULT}
+}
 
-source ${INSTALL_PATH}/scripts/functions.sh
+execute_script()
+{
+
+    RET=$(check_vault)
+    while [[ ${RET} != 1 ]];
+    do
+        if [ "$(docker stack ls | grep -w ocariot)" = "" ];
+        then
+            return
+        fi
+        RET=$(check_vault)
+        sleep 3
+    done
+
+    STACK_ID=$(docker stack ps ocariot --format "{{.ID}}" --filter "name=ocariot_vault" --filter "desired-state=running")
+
+    CONTAINER_ID=$(docker ps --format {{.ID}} --filter "name=${STACK_ID}")
+    echo "Executando script $2 para: $1"
+    docker exec -t ${CONTAINER_ID} /etc/vault/scripts/$2.sh $1
+}
 
 PROCESSES_NUMBER=$(ps aux \
     | grep -w service_monitor.sh \
