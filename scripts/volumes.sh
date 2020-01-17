@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+#INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
 INSTALL_PATH="/opt/docker-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
 
@@ -47,10 +48,24 @@ remove_volumes()
     done
 }
 
-VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-service|\-\-time|\-\-expression).*" -v | grep '\-\-')
+validate_file_path()
+{
+  ls $1 &> /dev/null
+  if [ $? != 0 ]; then
+    echo "Path $1 not found!"
+  fi
+}
+
+BACKEND_VAULT="consul"
+
+VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' \
+  | grep -P "(\-\-service|\-\-time|\-\-expression|\-\-location).*" -v | grep '\-\-')
 
 CHECK_NAME_PARAMETER=$(echo $@ | grep -wo '\-\-service')
 CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--service ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
+
+CHECK_BKP_DIRECTORY_PARAMETER=$(echo $@ | grep -wo '\-\-location')
+BKP_DIRECTORY=$(echo $@ | grep -o -P '(?<=--location ).*' | sed "s/--.*//g")
 
 CHECK_TIME_PARAMETER=$(echo $@ | grep -wo '\-\-time')
 RESTORE_TIME=$(echo $@ | grep -o -P '(?<=--time ).*' | sed 's/--.*//g')
@@ -59,19 +74,23 @@ CHECK_AUTO_BKP_PARAMETER=$(echo $@ | grep -wo '\-\-expression')
 EXPRESSION_BKP=$(echo "$@" | grep -o -P '(?<=--expression).*' | sed 's/--.*//g')
 
 if ([ "$1" != "backup" ] && [ "$1" != "restore" ]) \
-    || ([ "$2" != "--service" ] && [ "$2" != "--time" ] && [ "$2" != "--expression" ] && [ "$2" != "" ]) \
+    || ([ "$2" != "--service" ] && [ "$2" != "--time" ] && \
+       [ "$2" != "--expression" ] && [ "$2" != "--location" ] && [ "$2" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \
     || ([ ${CHECK_NAME_PARAMETER} ] && [ "${CONTAINERS_BKP}" = "" ]) \
+    || ([ ${CHECK_BKP_DIRECTORY_PARAMETER} ] && [ "$(validate_file_path ${BKP_DIRECTORY})" != "" ]) \
     || ([ ${CHECK_AUTO_BKP_PARAMETER} ] && [ "${EXPRESSION_BKP}" = "" ]) \
     || ([ ${CHECK_TIME_PARAMETER} ] && [ "$(echo ${RESTORE_TIME} | wc -w)" != 1 ]); then
     help
 fi
 
+if [ ! ${CHECK_BKP_DIRECTORY_PARAMETER} ]; then
+    BKP_DIRECTORY="$(pwd)"
+fi
+
 if [ ${RESTORE_TIME} ]; then
     RESTORE_TIME="--time ${RESTORE_TIME}"
 fi
-
-BACKEND_VAULT="consul"
 
 COMMAND="backup"
 BACKUP_VOLUME_PROPERTY=""
@@ -90,7 +109,7 @@ fi
 
 if [ ${CHECK_AUTO_BKP_PARAMETER} ];then
 
-    CRONTAB_COMMAND="${EXPRESSION_BKP} ${INSTALL_PATH}/ocariot ${COMMAND} ${CONTAINERS_BKP} >> /tmp/ocariot_backup.log"
+    CRONTAB_COMMAND="${EXPRESSION_BKP} ${INSTALL_PATH}/ocariot ${COMMAND} ${CONTAINERS_BKP} -- location ${BKP_DIRECTORY} >> /tmp/ocariot_backup.log"
 
     STATUS=$(check_crontab "${CRONTAB_COMMAND}")
 
@@ -115,7 +134,7 @@ VOLUMES_BKP=""
 RUNNING_SERVICES=""
 
 # Verifying if backup folder exist
-if [  "$1" = "restore" ] && [ "$(ls ${INSTALL_PATH}/backups 2> /dev/null | wc -l)" = 0 ];
+if [  "$1" = "restore" ] && [ "$(ls ${BKP_DIRECTORY} 2> /dev/null | wc -l)" = 0 ];
 then
     echo "No container backup was found"
     exit
@@ -127,7 +146,8 @@ if [ "${CONTAINERS_BKP}" = "" ]; then
         CONTAINERS_BKP=$(docker volume ls --format "{{.Name}}" --filter name=ocariot \
             | sed 's/\(psmdb-\|ocariot-\|-data\|redis-\)//g')
     else
-        CONTAINERS_BKP=$(ls ${INSTALL_PATH}/backups/ \
+        CONTAINERS_BKP=$(ls ${BKP_DIRECTORY} \
+            | grep -P 'ocariot.*data' \
             | sed 's/\(psmdb-\|ocariot-\|-data\|redis-\)//g')
     fi
 fi
@@ -151,7 +171,7 @@ do
             | grep -w ${CONTAINER_NAME})
     else
         MESSAGE="Not found ${CONTAINER_NAME} volume!"
-        VOLUME_NAME=$(ls ${INSTALL_PATH}/backups/ \
+        VOLUME_NAME=$(ls ${BKP_DIRECTORY} \
             | grep -w ${CONTAINER_NAME})
     fi
 
@@ -167,12 +187,6 @@ if [ "${VOLUMES_BKP}" = "" ];
 then
     echo "Not found ocariot volumes!"
     exit
-fi
-
-# Verifying if backup folder exist
-if [ ! $(find ${INSTALL_PATH} -maxdepth 1 -name backups) ]
-then
-    mkdir backups
 fi
 
 if [ ! $(find /tmp -maxdepth 1 -name cache-ocariot) ]
@@ -218,10 +232,16 @@ docker run --rm \
     --name volumerize \
     ${VOLUMES} \
     ${VOLUMES_CACHE} \
-    -v ${INSTALL_PATH}/backups:/backup${BACKUP_VOLUME_PROPERTY} \
+    -v ${BKP_DIRECTORY}:/backup${BACKUP_VOLUME_PROPERTY} \
     ${ENVIRONMENTS_SOURCE} \
     ${ENVIRONMENTS_TARGET} \
     blacklabelops/volumerize /bin/bash -c "${COMMAND}" \
-    && ${INSTALL_PATH}/scripts/start.sh
+    && PROCESS_BKP="OK"
+
+RUNNING_SERVICES=$(echo ${RUNNING_SERVICES} | sed 's/ //g' )
+
+if [ "${RUNNING_SERVICES}" ] && [ "${PROCESS_BKP}" = "OK" ]; then
+  ${INSTALL_PATH}/scripts/start.sh
+fi
 
 rm -rf  /tmp/cache-ocariot

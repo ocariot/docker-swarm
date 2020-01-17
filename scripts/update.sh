@@ -5,15 +5,10 @@ source ${INSTALL_PATH}/scripts/general_functions.sh
 
 VERSION="latest"
 
-STACK_NAME="ocariot"
-
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-service).*" -v | grep '\-\-')
 
 CHECK_SERVICE_PARAMETER=$(echo $@ | grep -wo '\-\-service')
 SERVICES=$(echo $@ | grep -o -P '(?<=--service ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
-
-CHECK_CLEAR_VOLUMES_PARAMETER=$(echo $@ | grep -wo '\-\-clear\-volumes')
-CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/--.*//g')
 
 if ([ "$1" != "--service" ] && [ "$1" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \
@@ -63,4 +58,8 @@ do
     docker pull ${IMAGE}:${VERSION}
 done
 
-${INSTALL_PATH}/scripts/start.sh
+RUNNING_SERVICES=$(echo ${RUNNING_SERVICES} | sed 's/ //g' )
+
+if [ "${RUNNING_SERVICES}" ]; then
+  ${INSTALL_PATH}/scripts/start.sh
+fi

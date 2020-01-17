@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-#INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
 INSTALL_PATH="/opt/docker-swarm"
 
 isInstalled()
@@ -34,7 +33,7 @@ fi
 
 ls ${INSTALL_PATH} &> /dev/null
 if [ "$?" != "0" ];then
-    sudo git clone https://github.com/ocariot/docker-swarm ${INSTALL_PATH} &> /dev/null
+    git clone https://github.com/ocariot/docker-swarm -b feature/backup-restore-and-replicate-services ${INSTALL_PATH} &> /dev/null
 fi
 
 MONITOR_COMMAND="service_monitor.sh"

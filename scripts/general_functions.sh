@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
 
+#INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+INSTALL_PATH="/opt/docker-swarm"
+
 # Used for start, update and volumes scripts
 set_variables_environment()
 {
     # Verifying the existence of .env file
     if [ ! $(find ${INSTALL_PATH} -name .env) ]
     then
-        cp ${INSTALL_PATH}/.env.example ${INSTALL_PATH}/.env
-        vi ${INSTALL_PATH}/.env
+       if [ "$EUID" -ne 0 ]
+          then echo "Please run as root"
+          exit
+       fi
+       cp ${INSTALL_PATH}/.env.example ${INSTALL_PATH}/.env
+       vi ${INSTALL_PATH}/.env
     fi
 
     # Executing .env to capture environment variable defined in it

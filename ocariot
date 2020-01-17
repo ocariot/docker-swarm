@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-
-INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+#INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+INSTALL_PATH="/opt/docker-swarm"
+source ${INSTALL_PATH}/scripts/general_functions.sh
 
 case $1 in
   start)
@@ -25,14 +26,32 @@ case $1 in
 	restore)
 		COMMAND="/scripts/volumes.sh $@"
 		;;
-  update)
+  update-images)
 		COMMAND="/scripts/update.sh $(echo $@ | sed "s/$1//g")"
 		;;
   monitor)
 		COMMAND="/scripts/monitor.sh $(echo $@ | sed "s/$1//g")"
 		;;
-	edit-env)
-		vi ${INSTALL_PATH}/.env_test
+  uninstall)
+		COMMAND="/scripts/uninstall.sh $(echo $@ | sed "s/$1//g")"
+		;;
+	edit-config)
+	  vi ${INSTALL_PATH}/.env
+		set_variables_environment
+		exit
+		;;
+  update-project)
+    if [ "$EUID" -ne 0 ]; then
+      echo "Please run as root"
+      exit
+    fi
+
+    sudo git -C ${INSTALL_PATH} reset --hard HEAD > /dev/null
+    sudo git -C ${INSTALL_PATH} pull -f > /dev/null
+
+    if [ $? = 0 ];then
+      echo "Project updated successfully!"
+    fi
 		exit
 		;;
 	*)
