@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Define where to store the generated certs and metadata.
-INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+INSTALL_PATH="/opt/ocariot-swarm"
 
 DIR="/tmp/ocariot-config"
 

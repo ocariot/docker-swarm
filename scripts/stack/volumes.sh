@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
-INSTALL_PATH="/opt/docker-swarm"
+INSTALL_PATH="/opt/ocariot-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
 
 check_crontab()
@@ -59,29 +59,33 @@ validate_file_path()
 BACKEND_VAULT="consul"
 
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' \
-  | grep -P "(\-\-service|\-\-time|\-\-expression|\-\-location).*" -v | grep '\-\-')
+  | grep -P "(\-\-service|\-\-time|\-\-expression|\-\-path|\-\-keys).*" -v | grep '\-\-')
 
 CHECK_NAME_PARAMETER=$(echo $@ | grep -wo '\-\-service')
-CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--service ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
+CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--service ).*' | sed "s/ --.*//g;s/vault/${BACKEND_VAULT}/g")
 
-CHECK_BKP_DIRECTORY_PARAMETER=$(echo $@ | grep -wo '\-\-location')
-BKP_DIRECTORY=$(echo $@ | grep -o -P '(?<=--location ).*' | sed "s/--.*//g")
+CHECK_BKP_DIRECTORY_PARAMETER=$(echo $@ | grep -wo '\-\-path')
+BKP_DIRECTORY=$(echo $@ | grep -o -P '(?<=--path ).*' | sed "s/ --.*//g")
 
 CHECK_TIME_PARAMETER=$(echo $@ | grep -wo '\-\-time')
-RESTORE_TIME=$(echo $@ | grep -o -P '(?<=--time ).*' | sed 's/--.*//g')
+RESTORE_TIME=$(echo $@ | grep -o -P '(?<=--time ).*' | sed 's/ --.*//g')
 
 CHECK_AUTO_BKP_PARAMETER=$(echo $@ | grep -wo '\-\-expression')
-EXPRESSION_BKP=$(echo "$@" | grep -o -P '(?<=--expression).*' | sed 's/--.*//g')
+EXPRESSION_BKP=$(echo "$@" | grep -o -P '(?<=--expression).*' | sed 's/ --.*//g')
+
+CHECK_KEY_PARAMETER=$(echo $@ | grep -wo '\-\-keys')
+KEY_DIRECTORY=$(echo $@ | grep -o -P '(?<=--keys ).*' | sed "s/ --.*//g")
 
 if ([ "$1" != "backup" ] && [ "$1" != "restore" ]) \
-    || ([ "$2" != "--service" ] && [ "$2" != "--time" ] && \
-       [ "$2" != "--expression" ] && [ "$2" != "--location" ] && [ "$2" != "" ]) \
+    || ([ "$2" != "--service" ] && [ "$2" != "--time" ] && [ "$2" != "--keys" ] && \
+       [ "$2" != "--expression" ] && [ "$2" != "--path" ] && [ "$2" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \
     || ([ ${CHECK_NAME_PARAMETER} ] && [ "${CONTAINERS_BKP}" = "" ]) \
     || ([ ${CHECK_BKP_DIRECTORY_PARAMETER} ] && [ "$(validate_file_path ${BKP_DIRECTORY})" != "" ]) \
+    || ([ ${CHECK_KEY_PARAMETER} ] && [ "$(validate_file_path ${KEY_DIRECTORY})" != "" ]) \
     || ([ ${CHECK_AUTO_BKP_PARAMETER} ] && [ "${EXPRESSION_BKP}" = "" ]) \
     || ([ ${CHECK_TIME_PARAMETER} ] && [ "$(echo ${RESTORE_TIME} | wc -w)" != 1 ]); then
-    help
+    stack_help
 fi
 
 if [ ! ${CHECK_BKP_DIRECTORY_PARAMETER} ]; then
@@ -97,6 +101,11 @@ BACKUP_VOLUME_PROPERTY=""
 SOURCE_VOLUME_PROPERTY=":ro"
 
 if [ "$1" = "restore" ]; then
+    if [ ${CHECK_KEY_PARAMETER} ];
+    then
+        cp ${KEY_DIRECTORY} ${INSTALL_PATH}/config/ocariot/vault/.keys
+        echo "Keys restored."
+    fi
     COMMAND="restore ${RESTORE_TIME}"
     BACKUP_VOLUME_PROPERTY=":ro"
     SOURCE_VOLUME_PROPERTY=""
@@ -104,16 +113,17 @@ fi
 
 if ([ ${COMMAND} = "backup" ] && [ ${CHECK_TIME_PARAMETER} ]) \
     || ([ ${COMMAND} = "restore" ] && [ ${CHECK_AUTO_BKP_PARAMETER} ]);then
-    help
+    stack_help
 fi
 
 if [ ${CHECK_AUTO_BKP_PARAMETER} ];then
 
-    CRONTAB_COMMAND="${EXPRESSION_BKP} ${INSTALL_PATH}/ocariot ${COMMAND} ${CONTAINERS_BKP} -- location ${BKP_DIRECTORY} >> /tmp/ocariot_backup.log"
+    CRONTAB_COMMAND="${EXPRESSION_BKP} ${INSTALL_PATH}/ocariot ${COMMAND} ${CONTAINERS_BKP} --path ${BKP_DIRECTORY} >> /tmp/ocariot_backup.log"
 
     STATUS=$(check_crontab "${CRONTAB_COMMAND}")
 
     if [ "${STATUS}" = "enable" ];then
+        crontab -l
         echo "Backup is already scheduled"
         exit
     fi
@@ -122,6 +132,7 @@ if [ ${CHECK_AUTO_BKP_PARAMETER} ];then
     STATUS=$(check_crontab "${CRONTAB_COMMAND}")
 
     if [ "${STATUS}" = "enable" ];then
+        crontab -l
         echo "Backup schedule successful!"
     else
         echo "Unsuccessful backup schedule!"
@@ -238,10 +249,13 @@ docker run --rm \
     blacklabelops/volumerize /bin/bash -c "${COMMAND}" \
     && PROCESS_BKP="OK"
 
-RUNNING_SERVICES=$(echo ${RUNNING_SERVICES} | sed 's/ //g' )
 
-if [ "${RUNNING_SERVICES}" ] && [ "${PROCESS_BKP}" = "OK" ]; then
-  ${INSTALL_PATH}/scripts/start.sh
+if [ "${PROCESS_BKP}" = "OK" ]; then
+  RUNNING_SERVICES=$(echo ${RUNNING_SERVICES} | sed 's/ //g' )
+
+  if [ "${RUNNING_SERVICES}" ]; then
+    ${INSTALL_PATH}/scripts/stack/start.sh
+  fi
 fi
 
 rm -rf  /tmp/cache-ocariot

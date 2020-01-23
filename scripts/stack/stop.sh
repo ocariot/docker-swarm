@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-INSTALL_PATH="/opt/docker-swarm"
+INSTALL_PATH="/opt/ocariot-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
 
 clear_volumes()
@@ -49,21 +49,36 @@ clear_environment()
 }
 
 STACK_NAME="ocariot"
+BACKEND_VAULT="consul"
 
-VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-service|\-\-clear\-volumes).*" -v | grep '\-\-')
+VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-services|\-\-clear\-volumes).*" -v | grep '\-\-')
 
-CHECK_SERVICE_PARAMETER=$(echo $@ | grep -wo '\-\-service')
-SERVICES=$(echo $@ | grep -o -P '(?<=--service ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
+CHECK_SERVICE_PARAMETER=$(echo $@ | grep -wo '\-\-services')
+SERVICES=$(echo $@ | grep -o -P '(?<=--services ).*' | sed "s/ --.*//g;s/vault/vault ${BACKEND_VAULT}/g")
 
 CHECK_CLEAR_VOLUMES_PARAMETER=$(echo $@ | grep -wo '\-\-clear\-volumes')
-CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/--.*//g')
+CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/ --.*//g')
 
-if ([ "$1" != "--service" ] && [ "$1" != "--clear-volumes" ] && [ "$1" != "" ]) \
+if ([ "$1" != "--services" ] && [ "$1" != "--clear-volumes" ] && [ "$1" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \
     || ([ ${CHECK_SERVICE_PARAMETER} ] && [ "${SERVICES}" = "" ]) \
     || ([ ${CHECK_CLEAR_VOLUMES_PARAMETER} ] && [ "$(echo ${CLEAR_VOLUMES_VALUE} | wc -w)" != 0 ]); then
 
-    help
+    stack_help
+fi
+
+docker stack ps ${STACK_NAME} > /dev/null 2>&1
+STATUS_OCARIOT_STACK=$?
+
+if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
+  echo "The ocariot stack is not active."
+  # If "-clear-volumes" parameter was passed the
+  # volumes will be excluded
+  if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
+      clear_volumes "${SERVICES}" &> /dev/null
+      sudo rm -rf ${INSTALL_PATH}/config/ocariot/vault/.keys
+  fi
+  exit
 fi
 
 for CONTAINER_NAME in ${SERVICES};
@@ -98,4 +113,6 @@ fi
 # volumes will be excluded
 if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
     clear_volumes "${SERVICES}" &> /dev/null
+    sudo rm -rf ${INSTALL_PATH}/config/ocariot/vault/.keys
 fi
+

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-INSTALL_PATH="/opt/docker-swarm"
+INSTALL_PATH="/opt/ocariot-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
 
 isInstalled()
@@ -30,13 +30,28 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-if [ "$#" -ne 0 ]; then
-    help
-    exit
+VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "\-\-clear\-volumes.*" -v | grep '\-\-')
+
+CHECK_CLEAR_VOLUMES_PARAMETER=$(echo $@ | grep -wo '\-\-clear\-volumes')
+CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/ --.*//g')
+
+if ([ "$1" != "--clear-volumes" ] && [ "$1" != "" ]) \
+    || [ ${VALIDATING_OPTIONS} ] \
+    || ([ ${CHECK_CLEAR_VOLUMES_PARAMETER} ] && [ "$(echo ${CLEAR_VOLUMES_VALUE} | wc -w)" != 0 ]); then
+
+    ocariot_help
 fi
 
+STACK_NAME="ocariot"
 MONITOR_COMMAND="service_monitor.sh"
 BKP_COMMAND="ocariot backup"
+
+docker stack ps ${STACK_NAME} > /dev/null 2>&1
+STATUS_OCARIOT_STACK=$?
+
+if ([ "${STATUS_OCARIOT_STACK}" -eq 0 ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" ]); then
+  ${INSTALL_PATH}/scripts/stack/stop.sh ${CHECK_CLEAR_VOLUMES_PARAMETER}
+fi
 
 sudo rm -f /usr/local/bin/ocariot
 ( crontab -u ${SUDO_USER} -l | sed "/${MONITOR_COMMAND}/d"; ) | crontab -u ${SUDO_USER} -

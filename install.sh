@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-INSTALL_PATH="/opt/docker-swarm"
+INSTALL_PATH="/opt/ocariot-swarm"
 
 isInstalled()
 {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-INSTALL_PATH="/opt/docker-swarm"
+INSTALL_PATH="/opt/ocariot-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
 
 # General function for setting up the environment
@@ -9,7 +9,7 @@ configure_environment()
 {
     set_variables_environment
 
-    mkdir config/ocariot/vault/.tokens 2> /dev/null
+    mkdir ${INSTALL_PATH}/config/ocariot/vault/.tokens 2> /dev/null
 
     # creating the files that will be used to share
     # the vault access token
@@ -22,9 +22,10 @@ configure_environment()
         fi
     done
 
-    # creating the file where the root token will be
-    # stored, along with the encryption keys
-    touch ${INSTALL_PATH}/config/ocariot/vault/.keys
+    if [ ! $(ls ${INSTALL_PATH}/config/ocariot/vault/.keys 2> /dev/null)  ]; then
+      touch ${INSTALL_PATH}/config/ocariot/vault/.keys
+      GENERATE_KEYS_FILE="TRUE"
+    fi
 }
 
 # Cleaning all files that contain the access tokens
@@ -65,30 +66,34 @@ waiting_rabbitmq()
     printf "\n"
 }
 
-# Waiting Startup Vault
-waiting_vault()
+check_vault()
 {
-   docker stack ps $1 > /dev/null 2>&1
-   if [ "$?" -ne 1 ]; then
-       COMMAND="docker stack ps ocariot -f name=ocariot_vault 2> /dev/null | grep Running"
-       VAULT_RET=$(bash -c "${COMMAND}")
-       printf "Waiting Startup Vault"
-       while [[ ${VAULT_RET} == "" ]]
-       do
-          VAULT_RET=$(bash -c "${COMMAND}")
-          printf "."
-          sleep 1
-       done
-       printf "\n"
-  fi
+    RESULT=$(docker service logs ocariot_vault 2> /dev/null | grep -c "Token Generation Enabled")
+    echo ${RESULT}
+}
+
+validate_keys()
+{
+    RET=$(check_vault)
+    while [[ ${RET} != 1 ]];
+    do
+      RET=$(check_vault)
+      sleep 3
+    done
+
+    if [ "$1" = "TRUE" ];then
+      cp ${INSTALL_PATH}/config/ocariot/vault/.keys $(pwd)/keys &> /dev/null
+    fi
 }
 
 STACK_NAME="ocariot"
 
 if [ "$#" -ne 0 ]; then
-    help
+    stack_help
     exit
 fi
+
+GENERATE_KEYS_FILE="FALSE"
 
 docker stack ps ${STACK_NAME} > /dev/null 2>&1
 STATUS_OCARIOT_STACK=$?
@@ -105,15 +110,17 @@ if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
     # Cleaning all files that contain the access tokens
     clear_tokens > /dev/null 2>&1
 
-    CERTS_CONSUL=$(ls ${INSTALL_PATH}/config/ocariot/consul/.certs/)
-    CERTS_VAULT=$(ls ${INSTALL_PATH}/config/ocariot/vault/.certs/)
+    CERTS_CONSUL=$(ls ${INSTALL_PATH}/config/ocariot/consul/.certs/ 2> /dev/null)
+    CERTS_VAULT=$(ls ${INSTALL_PATH}/config/ocariot/vault/.certs/ 2> /dev/null)
 
     if [ "${CERTS_CONSUL}" = "" ] || [ "${CERTS_VAULT}" = "" ];
     then
         # Creating server certificates for consul and client
         # certificates for VAULT access to CONSUL through SSL/TLS
-        ${INSTALL_PATH}/config/ocariot/consul/create-consul-and-vault-certs.sh > /dev/null 2>&1
+        ${INSTALL_PATH}/config/ocariot/consul/create-consul-and-vault-certs.sh &> /dev/null
     fi
+else
+    echo "Ocariot stack was already active."
 fi
 
 ${INSTALL_PATH}/scripts/service_monitor.sh >> /tmp/ocariot_monitor_service.log &
@@ -122,8 +129,8 @@ ${INSTALL_PATH}/scripts/service_monitor.sh >> /tmp/ocariot_monitor_service.log &
 docker stack deploy -c ${INSTALL_PATH}/docker-ocariot-stack.yml ${STACK_NAME}
 
 if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
-    # Waiting Startup Vault
-    waiting_vault ${STACK_NAME}
+
+    validate_keys "${GENERATE_KEYS_FILE}" &
 
     # Monitoring Vault service
     docker service logs ${STACK_NAME}_vault -f 2> /dev/null

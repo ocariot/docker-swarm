@@ -1,46 +1,71 @@
 #!/usr/bin/env bash
 #INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
-INSTALL_PATH="/opt/docker-swarm"
+INSTALL_PATH="/opt/ocariot-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
 
+stack_options()
+{
+  case $1 in
+      start)
+        COMMAND="/scripts/stack/start.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      stop)
+        COMMAND="/scripts/stack/stop.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      backup)
+            PARAMETERS=$@
+
+            if [ "${EXPRESSION_BKP}" ];then
+                PARAMETERS="$(echo -e "$@" \
+                    | sed 's/\-\-/\n\-\-/g' \
+                    | sed '/expression/d' \
+                    | sed -z 's/\n//g') --expression \"${EXPRESSION_BKP}\""
+            fi
+
+        COMMAND="/scripts/stack/volumes.sh ${PARAMETERS}"
+        ;;
+      restore)
+        COMMAND="/scripts/stack/volumes.sh $@"
+        ;;
+      update-images)
+        COMMAND="/scripts/stack/update-images.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      edit-config)
+        editor ${INSTALL_PATH}/.env
+        set_variables_environment
+        exit
+        ;;
+			*)
+        stack_help
+        ;;
+    esac
+}
+
+monitor_options()
+{
+  case $1 in
+      start)
+        COMMAND="/scripts/monitor/start.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      stop)
+        COMMAND="/scripts/monitor/stop.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      *)
+        monitor_help
+        ;;
+  esac
+}
+
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
 case $1 in
-  start)
-		COMMAND="/scripts/start.sh $(echo $@ | sed "s/$1//g")"
-		;;
-	stop)
-		COMMAND="/scripts/stop.sh $(echo $@ | sed "s/$1//g")"
-		;;
-	backup)
-        PARAMETERS=$@
-        EXPRESSION_BKP="$(echo "$@" | grep -o -P '(?<=--expression ).*' | sed 's/--.*//g')"
-
-        if [ "${EXPRESSION_BKP}" ];then
-            PARAMETERS="$(echo -e "$@" \
-                | sed 's/\-\-/\n\-\-/g' \
-                | sed '/expression/d' \
-                | sed -z 's/\n//g') --expression \"${EXPRESSION_BKP}\""
-        fi
-
-		COMMAND="/scripts/volumes.sh ${PARAMETERS}"
-		;;
-	restore)
-		COMMAND="/scripts/volumes.sh $@"
-		;;
-  update-images)
-		COMMAND="/scripts/update.sh $(echo $@ | sed "s/$1//g")"
-		;;
-  monitor)
-		COMMAND="/scripts/monitor.sh $(echo $@ | sed "s/$1//g")"
-		;;
   uninstall)
-		COMMAND="/scripts/uninstall.sh $(echo $@ | sed "s/$1//g")"
+		COMMAND="/scripts/stack/uninstall.sh $(echo $@ | sed "s/$1//g")"
 		;;
-	edit-config)
-	  vi ${INSTALL_PATH}/.env
-		set_variables_environment
-		exit
-		;;
-  update-project)
+  update)
     if [ "$EUID" -ne 0 ]; then
       echo "Please run as root"
       exit
@@ -54,9 +79,15 @@ case $1 in
     fi
 		exit
 		;;
+  stack)
+    EXPRESSION_BKP="$(echo "$@" | grep -o -P '(?<=--expression ).*' | sed 's/--.*//g')"
+		stack_options $(echo $@ | sed "s/$1 //g")
+		;;
+  monitor)
+    monitor_options $(echo $@ | sed "s/$1 //g")
+		;;
 	*)
-		echo "Sorry, I don't understand"
-		exit
+		ocariot_help
 		;;
 esac
 
