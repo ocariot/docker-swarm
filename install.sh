@@ -2,6 +2,11 @@
 
 INSTALL_PATH="/opt/ocariot-swarm"
 
+version()
+{
+  echo "1.2.0"
+}
+
 isInstalled()
 {
     ls /usr/local/bin/ocariot  &> /dev/null
@@ -10,7 +15,7 @@ isInstalled()
     ls ${INSTALL_PATH}  &> /dev/null
     RET_OCARIOT_PROJECT=$?
 
-    RET_CRONTAB_COMMAND=$(crontab -u ${SUDO_USER} -l | grep -w "${MONITOR_COMMAND}")
+    RET_CRONTAB_COMMAND=$(crontab -u ${USER} -l | grep -w "${MONITOR_COMMAND}")
 
     if [ "${RET_CRONTAB_COMMAND}" ] &&
       [ ${RET_OCARIOT_COMMAND} = 0 ] &&
@@ -34,12 +39,13 @@ fi
 ls ${INSTALL_PATH} &> /dev/null
 if [ "$?" != "0" ];then
     git clone https://github.com/ocariot/docker-swarm ${INSTALL_PATH} &> /dev/null
+    git -C ${INSTALL_PATH} checkout "tags/$(version)" &> /dev/null
 fi
 
 MONITOR_COMMAND="service_monitor.sh"
 
-ls /usr/local/bin/ocariot &> /dev/null
-if [ "$?" = "0" ];then
+STATUS=$(isInstalled)
+if ${STATUS}; then
     echo "OCARIoT Project already installed!"
     exit
 fi
@@ -51,7 +57,7 @@ fi
 
 CRONTAB_COMMAND=$(echo -e "@reboot ${INSTALL_PATH}/scripts/${MONITOR_COMMAND} >> /tmp/ocariot_monitor_service.log &")
 
-( crontab -u ${SUDO_USER} -l; echo "${CRONTAB_COMMAND}" ) | crontab -u ${SUDO_USER} -
+( crontab -u ${USER} -l; echo "${CRONTAB_COMMAND}" ) | crontab -u ${USER} -
 
 STATUS=$(isInstalled)
 if ${STATUS}; then

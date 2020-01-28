@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
-#INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
+
 INSTALL_PATH="/opt/ocariot-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
+
+get_last_tag()
+{
+   JSON=$(curl -s https://api.github.com/repos/ocariot/docker-swarm/releases/latest)
+   echo ${JSON} | grep -oP '(?<="tag_name": ")[^"]*'
+}
 
 stack_options()
 {
@@ -31,6 +37,12 @@ stack_options()
         COMMAND="/scripts/stack/update-images.sh $(echo $@ | sed "s/$1//g")"
         ;;
       edit-config)
+         # Verifying the existence of .env file
+        if [ ! $(find ${INSTALL_PATH} -name .env) ]
+        then
+           cp ${INSTALL_PATH}/.env.example ${INSTALL_PATH}/.env
+        fi
+
         editor ${INSTALL_PATH}/.env
         set_variables_environment
         exit
@@ -71,11 +83,14 @@ case $1 in
       exit
     fi
 
+    LAST_TAG=$(get_last_tag)
     sudo git -C ${INSTALL_PATH} reset --hard HEAD > /dev/null
-    sudo git -C ${INSTALL_PATH} pull -f > /dev/null
+    sudo git -C ${INSTALL_PATH} checkout "tags/${LAST_TAG}" &> /dev/null
 
-    if [ $? = 0 ];then
-      echo "Project updated successfully!"
+    if [ ${LAST_TAG} = $(git -C ${INSTALL_PATH} describe --tags --abbrev=0) ];then
+      echo "OCARIoT Project updated successfully!"
+    else
+      echo "OCARIoT Project wasn't updated with success!"
     fi
 		exit
 		;;

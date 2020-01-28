@@ -11,8 +11,8 @@ isInstalled()
     ls ${INSTALL_PATH}  &> /dev/null
     RET_OCARIOT_PROJECT=$?
 
-    RET_CRONTAB_MONITOR=$(crontab -u ${SUDO_USER} -l | grep -w "${MONITOR_COMMAND}")
-    RET_CRONTAB_BKP=$(crontab -u ${SUDO_USER} -l | grep -w "${BKP_COMMAND}")
+    RET_CRONTAB_MONITOR=$(crontab -u ${USER} -l | grep -w "${MONITOR_COMMAND}")
+    RET_CRONTAB_BKP=$(crontab -u ${USER} -l | grep -w "${BKP_COMMAND}")
 
     if [ ! "${RET_CRONTAB_MONITOR}" ] &&
       [ ! "${RET_CRONTAB_BKP}" ] &&
@@ -44,7 +44,7 @@ fi
 
 STACK_NAME="ocariot"
 MONITOR_COMMAND="service_monitor.sh"
-BKP_COMMAND="ocariot backup"
+BKP_COMMAND="ocariot stack backup"
 
 docker stack ps ${STACK_NAME} > /dev/null 2>&1
 STATUS_OCARIOT_STACK=$?
@@ -54,8 +54,8 @@ if ([ "${STATUS_OCARIOT_STACK}" -eq 0 ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" 
 fi
 
 sudo rm -f /usr/local/bin/ocariot
-( crontab -u ${SUDO_USER} -l | sed "/${MONITOR_COMMAND}/d"; ) | crontab -u ${SUDO_USER} -
-( crontab -u ${SUDO_USER} -l | sed "/${BKP_COMMAND}/d"; ) | crontab -u ${SUDO_USER} -
+( crontab -u ${USER} -l | sed "/${MONITOR_COMMAND}/d"; ) | crontab -u ${USER} -
+( crontab -u ${USER} -l | sed "/${BKP_COMMAND}/d"; ) | crontab -u ${USER} -
 sudo rm -fR ${INSTALL_PATH}
 
 STATUS=$(isInstalled)

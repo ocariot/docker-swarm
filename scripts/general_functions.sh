@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-#INSTALL_PATH="$(realpath $0 | grep .*docker-swarm -o)"
 INSTALL_PATH="/opt/ocariot-swarm"
 
 # Used for start, update and volumes scripts
