@@ -45,7 +45,7 @@ curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.2.0/install.sh
 ```
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.2.0/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.2.0/install.sh | sudo bash
 ```
 
 
