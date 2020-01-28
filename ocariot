@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+
+INSTALL_PATH="/opt/ocariot-swarm"
+source ${INSTALL_PATH}/scripts/general_functions.sh
+
+get_last_tag()
+{
+   JSON=$(curl -s https://api.github.com/repos/ocariot/docker-swarm/releases/latest)
+   echo ${JSON} | grep -oP '(?<="tag_name": ")[^"]*'
+}
+
+stack_options()
+{
+  case $1 in
+      start)
+        COMMAND="/scripts/stack/start.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      stop)
+        COMMAND="/scripts/stack/stop.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      backup)
+            PARAMETERS=$@
+
+            if [ "${EXPRESSION_BKP}" ];then
+                PARAMETERS="$(echo -e "$@" \
+                    | sed 's/\-\-/\n\-\-/g' \
+                    | sed '/expression/d' \
+                    | sed -z 's/\n//g') --expression \"${EXPRESSION_BKP}\""
+            fi
+
+        COMMAND="/scripts/stack/volumes.sh ${PARAMETERS}"
+        ;;
+      restore)
+        COMMAND="/scripts/stack/volumes.sh $@"
+        ;;
+      update-images)
+        COMMAND="/scripts/stack/update-images.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      edit-config)
+         # Verifying the existence of .env file
+        if [ ! $(find ${INSTALL_PATH} -name .env) ]
+        then
+           cp ${INSTALL_PATH}/.env.example ${INSTALL_PATH}/.env
+        fi
+
+        editor ${INSTALL_PATH}/.env
+        set_variables_environment
+        exit
+        ;;
+			*)
+        stack_help
+        ;;
+    esac
+}
+
+monitor_options()
+{
+  case $1 in
+      start)
+        COMMAND="/scripts/monitor/start.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      stop)
+        COMMAND="/scripts/monitor/stop.sh $(echo $@ | sed "s/$1//g")"
+        ;;
+      *)
+        monitor_help
+        ;;
+  esac
+}
+
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
+case $1 in
+  uninstall)
+		COMMAND="/scripts/stack/uninstall.sh $(echo $@ | sed "s/$1//g")"
+		;;
+  update)
+    if [ "$EUID" -ne 0 ]; then
+      echo "Please run as root"
+      exit
+    fi
+
+    LAST_TAG=$(get_last_tag)
+    sudo git -C ${INSTALL_PATH} reset --hard HEAD > /dev/null
+    sudo git -C ${INSTALL_PATH} checkout "tags/${LAST_TAG}" &> /dev/null
+
+    if [ ${LAST_TAG} = $(git -C ${INSTALL_PATH} describe --tags --abbrev=0) ];then
+      echo "OCARIoT Project updated successfully!"
+    else
+      echo "OCARIoT Project wasn't updated with success!"
+    fi
+		exit
+		;;
+  stack)
+    EXPRESSION_BKP="$(echo "$@" | grep -o -P '(?<=--expression ).*' | sed 's/--.*//g')"
+		stack_options $(echo $@ | sed "s/$1 //g")
+		;;
+  monitor)
+    monitor_options $(echo $@ | sed "s/$1 //g")
+		;;
+	*)
+		ocariot_help
+		;;
+esac
+
+bash -c "${INSTALL_PATH}${COMMAND}"
