@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 INSTALL_PATH="/opt/ocariot-swarm"
+OCARIOT_STACK_NAME="ocariot"
+MONITOR_STACK_NAME="ocariot_monitor"
 
 # Used for start, update and volumes scripts
 set_variables_environment()

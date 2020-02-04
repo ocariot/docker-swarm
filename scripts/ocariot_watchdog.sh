@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
+OCARIOT_STACK_NAME="ocariot"
+
 check_vault()
 {
-    RESULT=$(docker service logs ocariot_vault 2> /dev/null | grep -c "Token Generation Enabled")
+    RESULT=$(docker service logs ${OCARIOT_STACK_NAME}_vault 2> /dev/null | grep -c "Token Generation Enabled")
     echo ${RESULT}
 }
 
@@ -12,7 +14,7 @@ execute_script()
     RET=$(check_vault)
     while [[ ${RET} != 1 ]];
     do
-        if [ "$(docker stack ls | grep -w ocariot)" = "" ];
+        if [ "$(docker stack ls | grep -w ${OCARIOT_STACK_NAME})" = "" ];
         then
             return
         fi
@@ -20,7 +22,7 @@ execute_script()
         sleep 3
     done
 
-    STACK_ID=$(docker stack ps ocariot --format "{{.ID}}" --filter "name=ocariot_vault" --filter "desired-state=running")
+    STACK_ID=$(docker stack ps ${OCARIOT_STACK_NAME} --format "{{.ID}}" --filter "name=${OCARIOT_STACK_NAME}_vault" --filter "desired-state=running")
 
     CONTAINER_ID=$(docker ps --format {{.ID}} --filter "name=${STACK_ID}")
     echo "Executando script $2 para: $1"
@@ -28,7 +30,7 @@ execute_script()
 }
 
 PROCESSES_NUMBER=$(ps aux \
-    | grep -w service_monitor.sh \
+    | grep -w ocariot_watchdog.sh \
     | sed '/grep/d' \
     | wc -l)
 
@@ -43,12 +45,12 @@ docker events \
     --filter 'event=create' \
     --format '{{json .Actor.Attributes.name}} {{json .Action}}' \
     | while read event; do
-        docker stack ps ocariot &> /dev/null
+        docker stack ps ${OCARIOT_STACK_NAME} &> /dev/null
         if [ $? = 0  ];
         then
             EVENT=$(echo ${event} \
                     | sed 's/"//g')
-            CONTAINER_NAME=$(echo ${EVENT} | awk '{print $1}' | grep ocariot)
+            CONTAINER_NAME=$(echo ${EVENT} | awk '{print $1}' | grep ${OCARIOT_STACK_NAME})
             ACTION=$(echo ${EVENT} | awk '{print $2}')
 
             SCRIPT_NAME="create_tokens"

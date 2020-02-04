@@ -615,7 +615,7 @@ services:
 
   rabbitmq:
     hostname: rabbitmq
-    image: ocariot-rabbitmq
+    image: ocariot/rabbitmq:1.0.0
     deploy:
       replicas: 1
       restart_policy:

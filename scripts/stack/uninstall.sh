@@ -11,7 +11,7 @@ isInstalled()
     ls ${INSTALL_PATH}  &> /dev/null
     RET_OCARIOT_PROJECT=$?
 
-    RET_CRONTAB_MONITOR=$(crontab -u ${USER} -l | grep -w "${MONITOR_COMMAND}")
+    RET_CRONTAB_MONITOR=$(crontab -u ${USER} -l | grep -w "${WATCHDOG_COMMAND}")
     RET_CRONTAB_BKP=$(crontab -u ${USER} -l | grep -w "${BKP_COMMAND}")
 
     if [ ! "${RET_CRONTAB_MONITOR}" ] &&
@@ -42,11 +42,10 @@ if ([ "$1" != "--clear-volumes" ] && [ "$1" != "" ]) \
     ocariot_help
 fi
 
-STACK_NAME="ocariot"
-MONITOR_COMMAND="service_monitor.sh"
+WATCHDOG_COMMAND="ocariot_watchdog.sh"
 BKP_COMMAND="ocariot stack backup"
 
-docker stack ps ${STACK_NAME} > /dev/null 2>&1
+docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
 STATUS_OCARIOT_STACK=$?
 
 if ([ "${STATUS_OCARIOT_STACK}" -eq 0 ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" ]); then
@@ -54,9 +53,10 @@ if ([ "${STATUS_OCARIOT_STACK}" -eq 0 ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" 
 fi
 
 sudo rm -f /usr/local/bin/ocariot
-( crontab -u ${USER} -l | sed "/${MONITOR_COMMAND}/d"; ) | crontab -u ${USER} -
+( crontab -u ${USER} -l | sed "/${WATCHDOG_COMMAND}/d"; ) | crontab -u ${USER} -
 ( crontab -u ${USER} -l | sed "/${BKP_COMMAND}/d"; ) | crontab -u ${USER} -
 sudo rm -fR ${INSTALL_PATH}
+sudo rm -f /tmp/ocariot_watchdog.log /tmp/ocariot_backup.log
 
 STATUS=$(isInstalled)
 if ! ${STATUS}; then

@@ -32,7 +32,7 @@ configure_environment()
 clear_tokens()
 {
     # Directory where access tokens are placed
-    TOKEN_DIR=$(pwd)/config/ocariot/vault/tokens/
+    TOKEN_DIR=${INSTALL_PATH}/config/ocariot/vault/.tokens/
     # All access token files
     TOKEN_FILES=$(ls ${TOKEN_DIR})
     # Cleaning every access token files
@@ -41,34 +41,27 @@ clear_tokens()
     done
 }
 
-# Verifying the existence of RabbitMQ image
-verify_rabbitmq_image(){
-    OCARIOT_RABBITMQ_IMAGE=$(docker image ls | grep ocariot-rabbitmq)
-
-    if [[ ! ${OCARIOT_RABBITMQ_IMAGE} ]];then
-        docker build --tag ocariot-rabbitmq config/ocariot/rabbitmq > /dev/null &
-        waiting_rabbitmq
-    fi
-}
-
-# Creating RabbitMQ image
-waiting_rabbitmq()
+# Waiting Startup Vault
+waiting_vault()
 {
-    printf "Wait, We are creating RabbitMQ image for you ;)"
-    COMMAND="docker image ls | grep ocariot-rabbitmq"
-    RABBITMQ_RET=$(bash -c "${COMMAND}")
-    while [[ ${RABBITMQ_RET} == "" ]]
-    do
-        RABBITMQ_RET=$(bash -c "${COMMAND}")
-        printf "."
-        sleep 1
-    done
-    printf "\n"
+   docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
+   if [ "$?" -ne 1 ]; then
+       COMMAND="docker stack ps ${OCARIOT_STACK_NAME}
+          --filter name=${OCARIOT_STACK_NAME}_vault
+          --format {{.CurrentState}}"
+       printf "Waiting Startup Vault"
+       while [[ "$(${COMMAND} 2> /dev/null | grep -w Running )" == "" ]]
+       do
+          printf "."
+          sleep 1
+       done
+       printf "\n"
+  fi
 }
 
 check_vault()
 {
-    RESULT=$(docker service logs ocariot_vault 2> /dev/null | grep -c "Token Generation Enabled")
+    RESULT=$(docker service logs ${OCARIOT_STACK_NAME}_vault 2> /dev/null | grep -c "Token Generation Enabled")
     echo ${RESULT}
 }
 
@@ -86,8 +79,6 @@ validate_keys()
     fi
 }
 
-STACK_NAME="ocariot"
-
 if [ "$#" -ne 0 ]; then
     stack_help
     exit
@@ -95,7 +86,7 @@ fi
 
 GENERATE_KEYS_FILE="FALSE"
 
-docker stack ps ${STACK_NAME} > /dev/null 2>&1
+docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
 STATUS_OCARIOT_STACK=$?
 
 if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
@@ -104,11 +95,8 @@ if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
 
     configure_environment
 
-    # Verifying the existence of RabbitMQ image
-    verify_rabbitmq_image
-
     # Cleaning all files that contain the access tokens
-    clear_tokens > /dev/null 2>&1
+    clear_tokens &> /dev/null
 
     CERTS_CONSUL=$(ls ${INSTALL_PATH}/config/ocariot/consul/.certs/ 2> /dev/null)
     CERTS_VAULT=$(ls ${INSTALL_PATH}/config/ocariot/vault/.certs/ 2> /dev/null)
@@ -120,18 +108,23 @@ if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
         ${INSTALL_PATH}/config/ocariot/consul/create-consul-and-vault-certs.sh &> /dev/null
     fi
 else
-    echo "Ocariot stack was already active."
+    PARENT_PROCESS=$(ps -o args -p $PPID | tail -n +2 | grep -wo $(which ocariot))
+
+    if [ "${PARENT_PROCESS}" ];then
+        echo "Ocariot stack was already active."
+        exit
+    fi
 fi
 
-${INSTALL_PATH}/scripts/service_monitor.sh >> /tmp/ocariot_monitor_service.log &
+${INSTALL_PATH}/scripts/ocariot_watchdog.sh >> /tmp/ocariot_monitor_service.log &
 
 # Executing the services in mode swarm defined in docker-compose.yml file
-docker stack deploy -c ${INSTALL_PATH}/docker-ocariot-stack.yml ${STACK_NAME}
+docker stack deploy -c ${INSTALL_PATH}/docker-ocariot-stack.yml ${OCARIOT_STACK_NAME} --resolve-image changed
 
 if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
 
     validate_keys "${GENERATE_KEYS_FILE}" &
-
+    waiting_vault
     # Monitoring Vault service
-    docker service logs ${STACK_NAME}_vault -f 2> /dev/null
+    docker service logs ${OCARIOT_STACK_NAME}_vault -f 2> /dev/null
 fi

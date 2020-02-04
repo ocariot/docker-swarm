@@ -103,7 +103,7 @@ if [ "$1" = "restore" ]; then
     if [ ${CHECK_KEY_PARAMETER} ];
     then
         cp ${KEY_DIRECTORY} ${INSTALL_PATH}/config/ocariot/vault/.keys
-        echo "Keys restored."
+        echo "Keys restored with success!"
     fi
     COMMAND="restore ${RESTORE_TIME}"
     BACKUP_VOLUME_PROPERTY=":ro"
@@ -167,9 +167,9 @@ CONTAINERS_BKP=$(echo ${CONTAINERS_BKP} | sed "s/vault/${BACKEND_VAULT}/g")
 for CONTAINER_NAME in ${CONTAINERS_BKP};
 do
     SERVICE_NAME=$(docker service ls \
-        --filter name=ocariot \
+        --filter name=${OCARIOT_STACK_NAME} \
         --format "{{.Name}}" \
-        | grep -w ocariot_.*${CONTAINER_NAME})
+        | grep -w ${OCARIOT_STACK_NAME}_.*${CONTAINER_NAME})
     RUNNING_SERVICES="${RUNNING_SERVICES} ${SERVICE_NAME}"
 
     if [ "$1" = "backup" ];
@@ -219,12 +219,12 @@ done
 
 if [  "$(echo ${RUNNING_SERVICES} | grep ${BACKEND_VAULT})" ];
 then
-    RUNNING_SERVICES="${RUNNING_SERVICES} ocariot_vault"
+    RUNNING_SERVICES="${RUNNING_SERVICES} ${OCARIOT_STACK_NAME}_vault"
 fi
 
 if [ "$#" = "1" ];
 then
-    RUNNING_SERVICES=$(docker stack ps ocariot --format {{.Name}} | sed 's/\..*//g')
+    RUNNING_SERVICES=$(docker stack ps ${OCARIOT_STACK_NAME} --format {{.Name}} | sed 's/\..*//g')
 fi
 
 for SERVICE in ${RUNNING_SERVICES}

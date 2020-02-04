@@ -23,13 +23,13 @@ clear_volumes()
 remove_stack()
 {
     # Stopping the ocariot stack services  that being run
-    docker stack rm ${STACK_NAME} > /dev/null 2>&1
+    docker stack rm ${OCARIOT_STACK_NAME} > /dev/null 2>&1
 
     # Verifying if the services was removed
     printf "Stoping services"
     RET=0
     while [[ $RET -eq 0 ]]; do
-        docker stack ps ${STACK_NAME} > /dev/null 2>&1
+        docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
         RET=$?
         sleep 3
         printf "."
@@ -40,7 +40,7 @@ remove_stack()
 clear_environment()
 {
     ps aux \
-        | grep -w service_monitor.sh \
+        | grep -w ocariot_watchdog.sh \
         | sed '/grep/d' \
         | awk '{system("kill -9 "$2)}'
 
@@ -48,7 +48,6 @@ clear_environment()
     rm ${INSTALL_PATH}/config/ocariot/consul/.certs/* -f
 }
 
-STACK_NAME="ocariot"
 BACKEND_VAULT="consul"
 
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-services|\-\-clear\-volumes).*" -v | grep '\-\-')
@@ -67,11 +66,11 @@ if ([ "$1" != "--services" ] && [ "$1" != "--clear-volumes" ] && [ "$1" != "" ])
     stack_help
 fi
 
-docker stack ps ${STACK_NAME} > /dev/null 2>&1
+docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
 STATUS_OCARIOT_STACK=$?
 
 if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
-  echo "The ocariot stack is not active."
+  echo "The ${OCARIOT_STACK_NAME} stack is not active."
   # If "-clear-volumes" parameter was passed the
   # volumes will be excluded
   if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
@@ -84,9 +83,9 @@ fi
 for CONTAINER_NAME in ${SERVICES};
 do
     SERVICE_NAME=$(docker service ls \
-        --filter name=ocariot \
+        --filter name=${OCARIOT_STACK_NAME} \
         --format "{{.Name}}" \
-        | grep -w ocariot_.*${CONTAINER_NAME})
+        | grep -w ${OCARIOT_STACK_NAME}_.*${CONTAINER_NAME})
 
     if [ ! "${SERVICE_NAME}" ]; then
         echo "Service ${CONTAINER_NAME} not found!"
@@ -98,7 +97,7 @@ done
 REMOVE_STACK=false
 if [ "${SERVICES}" = "" ];
 then
-    RUNNING_SERVICES=$(docker stack ps ocariot --format {{.Name}} | sed 's/\..*//g')
+    RUNNING_SERVICES=$(docker stack ps ${OCARIOT_STACK_NAME} --format {{.Name}} | sed 's/\..*//g')
     REMOVE_STACK=true
 fi
 
