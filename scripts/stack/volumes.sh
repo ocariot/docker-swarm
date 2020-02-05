@@ -14,16 +14,6 @@ check_crontab()
     fi
 }
 
-stop_service()
-{
-    # Verifying if the services was removed
-    RET=1
-    while [[ $RET -ne 0 ]]; do
-        RET=$(docker service ls --filter "name=$1" | tail -n +2 | wc -l)
-    done
-    echo "$1 service stopped."
-}
-
 remove_volumes()
 {
     for VOLUME_NAME in $1; do
@@ -61,19 +51,19 @@ VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' \
   | grep -P "(\-\-services|\-\-time|\-\-expression|\-\-path|\-\-keys).*" -v | grep '\-\-')
 
 CHECK_NAME_PARAMETER=$(echo $@ | grep -wo '\-\-services')
-CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--services ).*' | sed "s/ --.*//g;s/vault/${BACKEND_VAULT}/g")
+CONTAINERS_BKP=$(echo $@ | grep -o -P '(?<=--services ).*' | sed "s/--.*//g;s/vault/${BACKEND_VAULT}/g")
 
 CHECK_BKP_DIRECTORY_PARAMETER=$(echo $@ | grep -wo '\-\-path')
-BKP_DIRECTORY=$(echo $@ | grep -o -P '(?<=--path ).*' | sed "s/ --.*//g")
+BKP_DIRECTORY=$(echo $@ | grep -o -P '(?<=--path ).*' | sed "s/--.*//g")
 
 CHECK_TIME_PARAMETER=$(echo $@ | grep -wo '\-\-time')
-RESTORE_TIME=$(echo $@ | grep -o -P '(?<=--time ).*' | sed 's/ --.*//g')
+RESTORE_TIME=$(echo $@ | grep -o -P '(?<=--time ).*' | sed 's/--.*//g')
 
 CHECK_AUTO_BKP_PARAMETER=$(echo $@ | grep -wo '\-\-expression')
-EXPRESSION_BKP=$(echo "$@" | grep -o -P '(?<=--expression).*' | sed 's/ --.*//g')
+EXPRESSION_BKP=$(echo "$@" | grep -o -P '(?<=--expression ).*' | sed 's/--.*//g')
 
 CHECK_KEY_PARAMETER=$(echo $@ | grep -wo '\-\-keys')
-KEY_DIRECTORY=$(echo $@ | grep -o -P '(?<=--keys ).*' | sed "s/ --.*//g")
+KEY_DIRECTORY=$(echo $@ | grep -o -P '(?<=--keys ).*' | sed "s/--.*//g")
 
 if ([ "$1" != "backup" ] && [ "$1" != "restore" ]) \
     || ([ "$2" != "--services" ] && [ "$2" != "--time" ] && [ "$2" != "--keys" ] && \
@@ -227,11 +217,7 @@ then
     RUNNING_SERVICES=$(docker stack ps ${OCARIOT_STACK_NAME} --format {{.Name}} | sed 's/\..*//g')
 fi
 
-for SERVICE in ${RUNNING_SERVICES}
-do
-    docker service rm ${SERVICE} &> /dev/null
-    stop_service ${SERVICE}
-done
+remove_services "${RUNNING_SERVICES}"
 
 if [ "$1" = "restore" ];
 then

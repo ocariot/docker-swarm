@@ -9,7 +9,7 @@ BACKEND_VAULT="consul"
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-services).*" -v | grep '\-\-')
 
 CHECK_SERVICE_PARAMETER=$(echo $@ | grep -wo '\-\-services')
-SERVICES=$(echo $@ | grep -o -P '(?<=--services ).*' | sed "s/ --.*//g;s/vault/vault ${BACKEND_VAULT}/g")
+SERVICES=$(echo $@ | grep -o -P '(?<=--services ).*' | sed "s/--.*//g;s/vault/vault ${BACKEND_VAULT}/g")
 
 if ([ "$1" != "--services" ] && [ "$1" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \

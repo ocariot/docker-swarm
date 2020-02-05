@@ -33,7 +33,7 @@ fi
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "\-\-clear\-volumes.*" -v | grep '\-\-')
 
 CHECK_CLEAR_VOLUMES_PARAMETER=$(echo $@ | grep -wo '\-\-clear\-volumes')
-CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/ --.*//g')
+CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/--.*//g')
 
 if ([ "$1" != "--clear-volumes" ] && [ "$1" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \

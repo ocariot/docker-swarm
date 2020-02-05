@@ -483,8 +483,6 @@ services:
       - PORT_HTTPS=5001
       - FITBIT_CLIENT_ID=${FITBIT_CLIENT_ID}
       - FITBIT_CLIENT_SECRET=${FITBIT_CLIENT_SECRET}
-      - FITBIT_CLIENT_SUBSCRIBER=${FITBIT_SUB_VERIFY_CODE}
-      - FITBIT_SUBSCRIBER_ID=${FITBIT_SUB_ID}
       - EXPRESSION_AUTO_SYNC=${EXPRESSION_AUTO_SYNC}
       - REDIS_URI=redis://redis-ds-agent:6379
     volumes:
@@ -580,7 +578,7 @@ services:
 
   food:
     hostname: food-service
-    image: ocariot/quest
+    image: ocariot/food
     deploy:
       replicas: 1
       restart_policy:

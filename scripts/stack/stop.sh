@@ -53,10 +53,10 @@ BACKEND_VAULT="consul"
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-services|\-\-clear\-volumes).*" -v | grep '\-\-')
 
 CHECK_SERVICE_PARAMETER=$(echo $@ | grep -wo '\-\-services')
-SERVICES=$(echo $@ | grep -o -P '(?<=--services ).*' | sed "s/ --.*//g;s/vault/vault ${BACKEND_VAULT}/g")
+SERVICES=$(echo $@ | grep -o -P '(?<=--services ).*' | sed "s/--.*//g;s/vault/vault ${BACKEND_VAULT}/g")
 
 CHECK_CLEAR_VOLUMES_PARAMETER=$(echo $@ | grep -wo '\-\-clear\-volumes')
-CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/ --.*//g')
+CLEAR_VOLUMES_VALUE=$(echo $@ | grep -o -P '(?<=--clear-volumes ).*' | sed 's/--.*//g')
 
 if ([ "$1" != "--services" ] && [ "$1" != "--clear-volumes" ] && [ "$1" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \
