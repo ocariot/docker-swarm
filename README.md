@@ -41,20 +41,19 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.2.0/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.2.1/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.2.0/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.2.1/install.sh | sudo bash
 ```
-
 
 
 After the execution of this script has finished, the message `****OCARIoT Project was installed with success!****` will be displayed, thus demonstrating that the software installation was successful. Otherwise, the message to be displayed will be `OCARIoT Project wasn't installed with success!`.
 
 If script execution is successful, the ocariot command will be recognized by bash:
 
-![](https://i.imgur.com/X3BURZP.png)
+![](https://i.imgur.com/2tEGTAP.png)
 
 :pushpin: Note: The directory adopted for installing the software is a location that requires sudo privileges, therefore, for the execution of the ocariot command, the sudo prefix will always be necessary. For example: `sudo ocariot stack start`. 
 
@@ -112,8 +111,6 @@ Variables used by the Data Sync Agent microservice, responsible for data synchro
 | -------- | ----------- | ------- |
 | `FITBIT_CLIENT_ID` | Client Id for Fitbit Application resposible to manage user data. This information is later shared through the REST API to the android application _(DA App)_. | `11ABWZ` |
 | `FITBIT_CLIENT_SECRET` |  Client Secret for Fitbit Application resposible to manage user data. This information is later shared through the REST API to the android application _(DA App)_. | `1234ab56cd789123wzd123a` |
-| `FITBIT_SUB_VERIFY_CODE` | Code used by Fitbit to verify the subscriber. |  `440be54d7202be1126b94d0`  |
-| `FITBIT_SUB_ID` | Customer Subscriber ID, used to manage the subscriber who will receive notification of a user resource. | `BR1AbxwzbzP8` |
 | `EXPRESSION_AUTO_SYNC` | Frequency time that the application will sync the users data in background according to the crontab expression. For example, the value `0 * * * *` means that synchronization will occur every hour. | `"0 * * * *"` |
 
 
@@ -170,7 +167,7 @@ $ sudo ocariot stack restore
 
 *Optional parameters:*
 
-- `--keys` - Specifies the location of the file containing the encryption keys and root tokenused by the vault. TThis file was generated at the first start of the OCARIoT stack using the command [`sudo ocariot stack start`](#3-Building-and-Deploying-the-containers);
+- `--keys` - Specifies the location of the file containing the encryption keys and root token used by the vault. This file was generated at the first start of the OCARIoT stack using the command [`sudo ocariot stack start`](#3-Building-and-Deploying-the-containers). To restore only the cryptographic keys, the backup path must not have any backup files;
 - `--path` - Parameter used to specify the path where the backup files will be searched for restoring from a previous backup performed. If this option is omitted, the backup files will be searched at the place of execution of the command currently described;
 - `--services <values>` - Defines a set of services that will have their volumes restored. The delimiter for specifying one more service is space. For example: `sudo ocariot stack restore --services account iot-tracking`;
 - `--time` - You can restore from a particular backup by adding a time parameter to the command restore. For example, using restore `--time 3D `at the end in the above command will restore a backup from 3 days ago. See the [Duplicity manual](http://duplicity.nongnu.org/vers7/duplicity.1.html#toc8) to view the accepted time formats .
@@ -212,6 +209,7 @@ $ sudo ocariot uninstall
 - Dashboard to monitor container health;
 - Log Manager;
 - Multiple replicas for important nodes.
+
 
 [//]: # (These are reference links used in the body of this note.)
 [license-image]: https://img.shields.io/badge/license-Apache%202-blue.svg

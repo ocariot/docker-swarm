@@ -9,7 +9,7 @@ BACKEND_VAULT="consul"
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "(\-\-services).*" -v | grep '\-\-')
 
 CHECK_SERVICE_PARAMETER=$(echo $@ | grep -wo '\-\-services')
-SERVICES=$(echo $@ | grep -o -P '(?<=--services ).*' | sed "s/ --.*//g;s/vault/vault ${BACKEND_VAULT}/g")
+SERVICES=$(echo $@ | grep -o -P '(?<=--services ).*' | sed "s/--.*//g;s/vault/vault ${BACKEND_VAULT}/g")
 
 if ([ "$1" != "--services" ] && [ "$1" != "" ]) \
     || [ ${VALIDATING_OPTIONS} ] \
@@ -21,7 +21,7 @@ set_variables_environment
 
 if [ "${SERVICES}" = "" ];
 then
-    RUNNING_SERVICES=$(docker stack ps ocariot --format {{.Name}} | sed 's/\..*//g')
+    RUNNING_SERVICES=$(docker stack ps ${OCARIOT_STACK_NAME} --format {{.Name}} | sed 's/\..*//g')
     IMAGES="${IMAGES_NAME} $(docker image ls \
         --format {{.Repository}} \
         | sort -u \
@@ -31,9 +31,9 @@ fi
 for CONTAINER_NAME in ${SERVICES};
 do
     SERVICE_NAME=$(docker service ls \
-        --filter name=ocariot \
+        --filter name=${OCARIOT_STACK_NAME} \
         --format "{{.Name}}" \
-        | grep -w ocariot_.*${CONTAINER_NAME})
+        | grep -w ${OCARIOT_STACK_NAME}_.*${CONTAINER_NAME})
 
     if [ "${SERVICE_NAME}" ]; then
         RUNNING_SERVICES="${RUNNING_SERVICES} ${SERVICE_NAME}"

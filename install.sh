@@ -4,7 +4,7 @@ INSTALL_PATH="/opt/ocariot-swarm"
 
 version()
 {
-  echo "1.2.0"
+  echo "1.2.1"
 }
 
 isInstalled()
@@ -15,7 +15,7 @@ isInstalled()
     ls ${INSTALL_PATH}  &> /dev/null
     RET_OCARIOT_PROJECT=$?
 
-    RET_CRONTAB_COMMAND=$(crontab -u ${USER} -l | grep -w "${MONITOR_COMMAND}")
+    RET_CRONTAB_COMMAND=$(crontab -u ${USER} -l | grep -w "${WATCHDOG_COMMAND}")
 
     if [ "${RET_CRONTAB_COMMAND}" ] &&
       [ ${RET_OCARIOT_COMMAND} = 0 ] &&
@@ -42,7 +42,7 @@ if [ "$?" != "0" ];then
     git -C ${INSTALL_PATH} checkout "tags/$(version)" &> /dev/null
 fi
 
-MONITOR_COMMAND="service_monitor.sh"
+WATCHDOG_COMMAND="ocariot_watchdog.sh"
 
 STATUS=$(isInstalled)
 if ${STATUS}; then
@@ -55,7 +55,7 @@ if [ ! "$(find /usr/local/bin -maxdepth 1 -name ocariot)" ]; then
     sudo chmod +x /usr/local/bin/ocariot
 fi
 
-CRONTAB_COMMAND=$(echo -e "@reboot ${INSTALL_PATH}/scripts/${MONITOR_COMMAND} >> /tmp/ocariot_monitor_service.log &")
+CRONTAB_COMMAND=$(echo -e "@reboot ${INSTALL_PATH}/scripts/${WATCHDOG_COMMAND} >> /tmp/ocariot_watchdog.log &")
 
 ( crontab -u ${USER} -l; echo "${CRONTAB_COMMAND}" ) | crontab -u ${USER} -
 
