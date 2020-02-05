@@ -17,11 +17,11 @@ check_crontab()
 stop_service()
 {
     # Verifying if the services was removed
-    echo "Stoping service: $1"
     RET=1
     while [[ $RET -ne 0 ]]; do
         RET=$(docker service ls --filter "name=$1" | tail -n +2 | wc -l)
     done
+    echo "$1 service stopped."
 }
 
 remove_volumes()
@@ -162,7 +162,7 @@ if [ "${CONTAINERS_BKP}" = "" ]; then
     fi
 fi
 
-CONTAINERS_BKP=$(echo ${CONTAINERS_BKP} | sed "s/vault/${BACKEND_VAULT}/g")
+CONTAINERS_BKP=$(echo ${CONTAINERS_BKP} | tr " " "\n" | sed "s/vault/${BACKEND_VAULT}/g" | sort -u)
 
 for CONTAINER_NAME in ${CONTAINERS_BKP};
 do
@@ -229,7 +229,7 @@ fi
 
 for SERVICE in ${RUNNING_SERVICES}
 do
-    docker service rm ${SERVICE} &> /dev/null &
+    docker service rm ${SERVICE} &> /dev/null
     stop_service ${SERVICE}
 done
 
