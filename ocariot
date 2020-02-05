@@ -84,7 +84,8 @@ case $1 in
     fi
 
     LAST_TAG=$(get_last_tag)
-    sudo git -C ${INSTALL_PATH} reset --hard HEAD > /dev/null
+    sudo git -C ${INSTALL_PATH} reset --hard HEAD &> /dev/null
+    sudo git -C ${INSTALL_PATH} fetch &> /dev/null
     sudo git -C ${INSTALL_PATH} checkout "tags/${LAST_TAG}" &> /dev/null
 
     if [ ${LAST_TAG} = $(git -C ${INSTALL_PATH} describe --tags --abbrev=0) ];then
