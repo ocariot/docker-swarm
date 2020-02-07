@@ -7,16 +7,13 @@ read_json()
 }
 
 # Checking if mongodb was initialized
-check_mongo()
+check_psmysql()
 {
-    # Waiting for MongoDB to boot
-    RET=1
-    while [[ RET -ne 0 ]]; do
-        echo "=> Waiting for confirmation of MongoDB service startup..."
+    # Waiting for PSMYSQL to boot
+    while ! mysql -u root  -e ";" ; do
+        echo "=> Waiting for confirmation of MySQL service startup..."
         # The attempts are realized in each 5 seconds
         sleep 5
-        mongo admin --port 27017 --sslAllowInvalidCertificates --ssl --eval "help" >/dev/null 2>&1
-        RET=$?
     done
 }
 
@@ -38,19 +35,21 @@ get_certificates()
             ${VAULT_BASE_URL}:${VAULT_PORT}/v1/pki/issue/${HOSTNAME})
     done
 
-    mkdir -p /tmp/mysql/ssl/
+    mkdir -p /etc/mysql-ssl/
 
     # Processing certificates
     CERTIFICATES=$(cat /tmp/certificates.json)
 
     PRIVATE_KEY=$(read_json private_key "${CERTIFICATES}")
-    echo -e "${PRIVATE_KEY}" > /tmp/mysql/ssl/server-key.pem
+    echo -e "${PRIVATE_KEY}" > /etc/mysql-ssl/server-key.pem
 
     CERTIFICATE=$(read_json certificate "${CERTIFICATES}")
-    echo -e "${CERTIFICATE}" > /tmp/mysql/ssl/server-cert.pem
+    echo -e "${CERTIFICATE}" > /etc/mysql-ssl/server-cert.pem
 
     CA=$(read_json issuing_ca "${CERTIFICATES}")
-    echo -e "${CA}" > /tmp/mysql/ssl/ca.pem
+    echo -e "${CA}" > /etc/mysql-ssl/ca.pem
+
+    chmod -R 0555 /etc/mysql-ssl/
 
     # Removing temporarily file utilized in request
     rm /tmp/certificates.json
@@ -61,7 +60,7 @@ get_certificates()
 add_user()
 {
 echo "Initializing user creating"
-
+    echo ${VAULT_ACCESS_TOKEN}
 RET_CREDENTIAL=1
 while [[ $RET_CREDENTIAL -ne 200 ]]; do
     echo "=> Waiting for Admin Credentials..."
@@ -71,32 +70,30 @@ while [[ $RET_CREDENTIAL -ne 200 ]]; do
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --cacert /tmp/vault/ca.crt --silent \
             --output /tmp/admin_credential.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/credential)
+            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret-v1/${HOSTNAME}/credential)
 done
 
 # Processing credentials received
-CREDENTIAL=$(cat /tmp/admin_credential.json | jq '.data.data.user, .data.data.passwd')
+CREDENTIAL=$(cat /tmp/admin_credential.json)
 
 # Username admin
-USER=$(echo $CREDENTIAL | awk 'NR == 1{print $1}')
+USER=$(read_json user "${CREDENTIAL}")
 # Password admin
-PASSWD=$(echo $CREDENTIAL | awk 'NR == 1{print $2}')
+PASSWD=$(read_json passwd "${CREDENTIAL}")
+
+echo "${USER} ${PASSWD}"
 
 # Removing temporarily file utilized in request
 rm /tmp/admin_credential.json
 
 # Checking if mongodb was initialized
-check_mongo
+check_psmysql
 
 # Establish connection with mongo and creating user admin
-mongo  --port 27017 --sslAllowInvalidCertificates --ssl <<EOF
-use admin;
-db.createUser(
-  {
-    user: ${USER},
-    pwd: ${PASSWD},
-    roles: ["userAdminAnyDatabase", "dbAdminAnyDatabase", "readWriteAnyDatabase"]
-  });
+mysql <<EOF
+DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'mysql.infoschema', 'mysql.session');
+CREATE USER "${USER}"@"%" IDENTIFIED BY "${PASSWD}";
+GRANT ALL ON *.* TO "${USER}"@"%" WITH GRANT OPTION ;
 EOF
 
 # Function to realize token Revocation
@@ -128,14 +125,10 @@ configure_environment()
 
 cat > "/etc/keyring_vault.conf" << EOF
 vault_url = ${VAULT_BASE_URL}:${VAULT_PORT}
-secret_mount_point = 'secret-v1/psmysql/encryptionKey'
+secret_mount_point = secret-v1/psmysql-missions/encryptionKey
 token = ${VAULT_ACCESS_TOKEN}
 vault_ca = /tmp/vault/ca.crt
 EOF
-
-#    sed -i s/__DOMAIN__/${VAULT_BASE_URL}/g /etc/keyring_vault.conf
-#    sed -i s/__PORT__/${VAULT_PORT}/g /etc/keyring_vault.conf
-#    sed -i s/__TOKEN__/${VAULT_ACCESS_TOKEN}/g /etc/keyring_vault.conf
 
     RET_ENCRYPT_KEY=1
     while [[ RET_ENCRYPT_KEY -ne 200 ]]; do
@@ -177,7 +170,7 @@ get_certificates
 #
 ## Function to create admin user and to revoke Vault token after
 ## finalized configurations
-#add_user &
-#
+add_user &
+
 ## Starting MongoDB
 /docker-entrypoint.sh mysqld

@@ -7,5 +7,5 @@ path "pki/issue/psmysql-missions" {
 }
 
 path "secret-v1/psmysql-missions/*" {
-  capabilities = ["read"]
+  capabilities = ["create", "read", "update", "delete", "list"]
 }

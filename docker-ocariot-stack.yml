@@ -316,18 +316,15 @@ services:
       - MYSQL_ROOT_PASSWORD=secret
     volumes:
       - "./config/ocariot/vault/.tokens/access-token-psmysql-missions:/tmp/access-token-psmysql-missions"
-    #      - "psmysql-missions-data:/data/db"
+      - "psmysql-missions-data:/var/lib/mysql"
     command: initializing_psmysql.sh
     configs:
       - source: ocariot-mysql-config
         target: /etc/my.cnf
         mode: 0444
-#      - source: ocariot-mysql-vault-config
-#        target: /etc/keyring_vault.conf
-#        mode: 0664
       - source: ocariot-init-psmysql-config
         target: /usr/bin/initializing_psmysql.sh
-        mode: 0777
+        mode: 0750
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
@@ -781,8 +778,6 @@ configs:
     file: config/ocariot/psmdb/mongod.conf
   ocariot-mysql-config:
     file: config/ocariot/psmysql/my.cnf
-  ocariot-mysql-vault-config:
-    file: config/ocariot/psmysql/keyring_vault.conf
   ocariot-create-token-vault-config:
     file: config/ocariot/vault/scripts/create_tokens.sh
   ocariot-remove-token-vault-config:
