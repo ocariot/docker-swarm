@@ -101,13 +101,13 @@ check_rabbitmq()
 # Function to check if PMSDBs was initialized
 # It's necessary to pass the domain name where is localized the PMSDB,
 # this is the first parameter of function
-check_psmdbs()
+check_ps()
 {
     # Awaiting PSDB initialization specified in the first parameter
     RET=1
     while [[ $RET -ne 0 ]]; do
         echo "=> Waiting for confirmation of $1 service startup"
-        $(nc -vz $1 27017) 2> /dev/null
+        $(nc -vz $1 $2) 2> /dev/null
         RET=$?
         sleep 2
     done
@@ -141,35 +141,55 @@ generate_certificates()
 
 # Function responsible to establish the plugin
 # connection and create a role for respective PSMDB
-configure_psmdb_plugin()
+configure_plugin()
 {
-    # Processing the name of the database passed in the first parameter
-    local DB=$(echo $1 | sed s/psmdb-//g)
+    if [ $(echo $1 | grep psmdb) ];then
+        # Processing the name of the database passed in the first parameter
+        DB=$(echo $1 | sed s/psmdb-//g)
+        PORT="27017"
+        PLUGIN_NAME="mongodb-database-plugin"
+        CONNECTION_URL="mongodb://{{username}}:{{password}}@$1:27017/admin"
+
+        # Creating the role that will be utilized to request a credential in respective PSMDB
+        vault write database/roles/${DB}-service \
+            db_name=$1 \
+            creation_statements='{ "db": "'${DB}'", "roles": [{ "role": "readWrite" }] }' \
+            revocation_statements='{ "db": "'${DB}'"}' \
+            default_ttl=${TTL_PSMDB_USER} \
+            max_ttl=${TTL_PSMDB_USER} > /dev/null
+    fi
+
+    if [ $(echo $1 | grep psmysql) ];then
+        # Processing the name of the database passed in the first parameter
+        DB=$(echo $1 | sed s/psmysql-//g)
+        PORT="3306"
+        PLUGIN_NAME="mysql-database-plugin"
+        CONNECTION_URL="{{username}}:{{password}}@tcp($1:3306)/"
+
+        # Creating the role that will be utilized to request a credential in respective PSMDB
+        vault write database/roles/${DB}-service \
+            db_name=$1 \
+            creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED WITH mysql_native_password BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
+            default_ttl=${TTL_PSMDB_USER} \
+            max_ttl=${TTL_PSMDB_USER} > /dev/null
+    fi
 
     # Verifying if the PSMDB was already initialized
-    check_psmdbs $1
+    check_ps $1 ${PORT}
 
     # Trying establish connection with actual PSMDB
     local RET=1
     while [[ $RET -ne 0 ]]; do
         echo "=> Waiting to enable database plugin for $1 service"
         vault write database/config/$1 \
-                plugin_name=mongodb-database-plugin \
+                plugin_name=${PLUGIN_NAME} \
                 allowed_roles=${DB}-service \
-                connection_url="mongodb://{{username}}:{{password}}@$1:27017/admin" \
+                connection_url=${CONNECTION_URL} \
                 username=$2 \
-                password=$3 2> /dev/null
+                password=$3
         RET=$?
         sleep 2
     done
-
-    # Creating the role that will be utilized to request a credential in respective PSMDB
-    vault write database/roles/${DB}-service \
-        db_name=$1 \
-        creation_statements='{ "db": "'${DB}'", "roles": [{ "role": "readWrite" }] }' \
-        revocation_statements='{ "db": "'${DB}'"}' \
-        default_ttl=${TTL_PSMDB_USER} \
-        max_ttl=${TTL_PSMDB_USER} > /dev/null
 }
 
 # Function used to generate encryption key used to encrypt data
@@ -181,33 +201,51 @@ configure_psmdbs()
     vault secrets enable database
 
     # Selecting all databases
-    local DATABASES=$(echo $(ls /etc/vault/policies/ | sed s/.hcl//g | grep psmdb))
+    local DATABASES=$(echo $(ls /etc/vault/policies/ | sed s/.hcl//g | grep "psmdb\|psmysql"))
 
     # Creating admin users with its respective credentials
     for DATABASE in ${DATABASES}; do
+
         # Generating encryption key
         ENCRYPTION_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
-        # Saving the encrypt key as a secret in Vault
-        vault kv put secret/${DATABASE}/encryptionKey value=${ENCRYPTION_KEY} > /dev/null
 
         # Defining user name based in PSMDB name
-        local USER=$(echo ${DATABASE} | sed s/psmdb-//g)".app"
+        local USER=$(echo ${DATABASE} | sed 's/psmdb-\|psmysql-//g')".app"
         # Generate password for admin user
         local PASSWD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
 
-        # Saving the user and password generated as a secret in Vault
-        vault kv put secret/${DATABASE}/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
+        if [ $(echo ${DATABASE} | grep psmdb) ];then
+          # Saving the encrypt key as a secret in Vault
+          vault kv put secret/${DATABASE}/encryptionKey value=${ENCRYPTION_KEY} > /dev/null
+
+          # Saving the user and password generated as a secret in Vault
+          vault kv put secret/${DATABASE}/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
+        fi
+        if [ $(echo ${DATABASE} | grep psmysql) ];then
+          # Saving the encrypt key as a secret in Vault
+          vault kv put secret-v1/${DATABASE}/encryptionKey value=${ENCRYPTION_KEY} > /dev/null
+
+          # Saving the user and password generated as a secret in Vault
+          vault kv put secret-v1/${DATABASE}/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
+        fi
     done
 
     for DATABASE in ${DATABASES}; do
+        if [ $(echo ${DATABASE} | grep psmdb) ];then
+          PATH_SECRET="secret"
+        fi
+
+        if [ $(echo ${DATABASE} | grep psmysql) ];then
+          PATH_SECRET="secret-v1"
+        fi
         # Defining user name based in PSMDB name
-        local USER=$(vault kv get -field="user" secret/${DATABASE}/credential)
+        local USER=$(vault kv get -field="user" ${PATH_SECRET}/${DATABASE}/credential)
         # Generate password for admin user
-        local PASSWD=$(vault kv get -field="passwd" secret/${DATABASE}/credential)
+        local PASSWD=$(vault kv get -field="passwd" ${PATH_SECRET}/${DATABASE}/credential)
 
         # Function responsible to establish the plugin
         # connection and create a role for respective PSMDB
-        configure_psmdb_plugin ${DATABASE} ${USER} ${PASSWD}
+        configure_plugin ${DATABASE} ${USER} ${PASSWD}
     done
 }
 
@@ -278,7 +316,7 @@ revoke_leases()
         # Function to check if PMSDBs was initialized
         # It's necessary to pass the domain name where is localized the PMSDB,
         # this is the first parameter of function
-        check_psmdbs ${DATABASE}
+        check_ps ${DATABASE} "27017"
     done
 
     # Getting root access token
@@ -353,7 +391,8 @@ configure_vault()
     root_user_authentication
 
     # Enabling secrets enrollment in Vault
-    vault secrets enable -path=secret/ kv-v2
+    vault secrets enable -version=1 -path=secret-v1/ kv
+    vault secrets enable -version=2 -path=secret/ kv
 }
 
 # Function responsible to create the policies

@@ -116,7 +116,7 @@ else
     fi
 fi
 
-${INSTALL_PATH}/scripts/ocariot_watchdog.sh >> /tmp/ocariot_monitor_service.log &
+${INSTALL_PATH}/scripts/ocariot_watchdog.sh >> /tmp/ocariot_watchdog.log &
 
 # Executing the services in mode swarm defined in docker-compose.yml file
 docker stack deploy -c ${INSTALL_PATH}/docker-ocariot-stack.yml ${OCARIOT_STACK_NAME} --resolve-image changed
