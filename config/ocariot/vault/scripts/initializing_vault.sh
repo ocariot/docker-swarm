@@ -149,6 +149,14 @@ configure_plugin()
         PORT="27017"
         PLUGIN_NAME="mongodb-database-plugin"
         CONNECTION_URL="mongodb://{{username}}:{{password}}@$1:27017/admin"
+
+        # Creating the role that will be utilized to request a credential in respective PSMDB
+        vault write database/roles/${DB}-service \
+            db_name=$1 \
+            creation_statements='{ "db": "'${DB}'", "roles": [{ "role": "readWrite" }] }' \
+            revocation_statements='{ "db": "'${DB}'"}' \
+            default_ttl=${TTL_PSMDB_USER} \
+            max_ttl=${TTL_PSMDB_USER} > /dev/null
     fi
 
     if [ $(echo $1 | grep psmysql) ];then
@@ -156,12 +164,19 @@ configure_plugin()
         DB=$(echo $1 | sed s/psmysql-//g)
         PORT="3306"
         PLUGIN_NAME="mysql-database-plugin"
-        CONNECTION_URL="{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
+        CONNECTION_URL="{{username}}:{{password}}@tcp($1:3306)/"
+
+        # Creating the role that will be utilized to request a credential in respective PSMDB
+        vault write database/roles/${DB}-service \
+            db_name=$1 \
+            creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
+            default_ttl=${TTL_PSMDB_USER} \
+            max_ttl=${TTL_PSMDB_USER} > /dev/null
     fi
 
     # Verifying if the PSMDB was already initialized
     check_ps $1 ${PORT}
-
+    echo "$2 $3"
     # Trying establish connection with actual PSMDB
     local RET=1
     while [[ $RET -ne 0 ]]; do
@@ -171,18 +186,10 @@ configure_plugin()
                 allowed_roles=${DB}-service \
                 connection_url=${CONNECTION_URL} \
                 username=$2 \
-                password=$3 2> /dev/null
+                password=$3
         RET=$?
         sleep 2
     done
-
-    # Creating the role that will be utilized to request a credential in respective PSMDB
-    vault write database/roles/${DB}-service \
-        db_name=$1 \
-        creation_statements='{ "db": "'${DB}'", "roles": [{ "role": "readWrite" }] }' \
-        revocation_statements='{ "db": "'${DB}'"}' \
-        default_ttl=${TTL_PSMDB_USER} \
-        max_ttl=${TTL_PSMDB_USER} > /dev/null
 }
 
 # Function used to generate encryption key used to encrypt data
@@ -224,17 +231,21 @@ configure_psmdbs()
     done
 
     for DATABASE in ${DATABASES}; do
-        # Defining user name based in PSMDB name
-        local USER=$(vault kv get -field="user" secret/${DATABASE}/credential)
-        # Generate password for admin user
-        local PASSWD=$(vault kv get -field="passwd" secret/${DATABASE}/credential)
-
         if [ $(echo ${DATABASE} | grep psmdb) ];then
-          # Function responsible to establish the plugin
-          # connection and create a role for respective PSMDB
-          configure_plugin ${DATABASE} ${USER} ${PASSWD}
+          PATH_SECRET="secret"
         fi
 
+        if [ $(echo ${DATABASE} | grep psmysql) ];then
+          PATH_SECRET="secret-v1"
+        fi
+        # Defining user name based in PSMDB name
+        local USER=$(vault kv get -field="user" ${PATH_SECRET}/${DATABASE}/credential)
+        # Generate password for admin user
+        local PASSWD=$(vault kv get -field="passwd" ${PATH_SECRET}/${DATABASE}/credential)
+
+        # Function responsible to establish the plugin
+        # connection and create a role for respective PSMDB
+        configure_plugin ${DATABASE} ${USER} ${PASSWD}
     done
 }
 

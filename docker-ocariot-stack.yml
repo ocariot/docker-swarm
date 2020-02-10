@@ -648,6 +648,7 @@ services:
         max-size: 100m
 
   missions:
+    hostname: missions-service
     image: "ocariot/missions:1.4"
     deploy:
       replicas: 1
@@ -656,25 +657,24 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
+      - VAULT_BASE_URL=${VAULT_BASE_URL}
+      - VAULT_PORT=${VAULT_PORT}
       - NODE_ENV=production
-      - "PORT=3050"
-      - "SSL_PORT=3051"
-      - "DATABASE_DIALECT=mysql"
-      - "DATABASE_HOST=localhost"
-      - "DATABASE_NAME=ocaiot"
-      - "DATABASE_PORT=3306"
-      - "DATABASE_USER_NAME=root"
-      - "DATABASE_USER_PASSWORD=null"
-      - "RABBITMQ_URI=amqp://mission.app:OCARIoT@ocariot.nutes.uepb.edu.br"
-      - "UPLOAD_VOLUME=/files/"
-    #    volumes:
-    #      - /var/www/WEB/backend:/server
-    #       - server_files:/files
-    #    command: initializing_service.sh
-    #    configs:
-    #      - source: ocariot-init-service-config
-    #        target: /usr/bin/initializing_service.sh
-    #        mode: 0750
+      - PORT=8000
+      - SSL_PORT=8001
+      - DATABASE_DIALECT=mysql
+      - DATABASE_HOST=psmysql-missions
+      - DATABASE_NAME=missions
+      - DATABASE_PORT=3306
+      - DATABASE_SSL=false
+      - UPLOAD_VOLUME=/files/
+    volumes:
+      - "./config/ocariot/vault/.tokens/access-token-missions-service:/tmp/access-token-missions-service"
+    command: initializing_service.sh
+    configs:
+      - source: ocariot-init-service-config
+        target: /usr/bin/initializing_service.sh
+        mode: 0750
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt

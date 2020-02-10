@@ -9,9 +9,14 @@ read_json()
 # Function to get credentials to mount URI and to access PSMDB
 get_psmdb_credential()
 {
+    PS_NAME="PSMDB"
+    if [ "$(echo ${HOSTNAME} | grep missions)" ];then
+        PS_NAME="PSMYSQL"
+    fi
+
     RET_CREDENTIAL=1
     while [[ $RET_CREDENTIAL -ne 200 ]]; do
-        echo "=> Waiting for PSMDB credential..."
+        echo "=> Waiting for ${PS_NAME} credential..."
         # The requests are realized every 2 seconds
         sleep 2
         # Request to get access credential for PSMDB
@@ -33,8 +38,13 @@ get_psmdb_credential()
     # Password received
     local PASSWD=$(read_json password ${CREDENTIAL})
 
-    # Mounting environment variable and placing in "~/.bashrc" file
-    echo "export MONGODB_URI=mongodb://${USER}:${PASSWD}@psmdb-${CONTAINER}:27017/${CONTAINER}?ssl=true" >> ~/.bashrc
+    if [ "${PS_NAME}" = "PSMDB" ]; then
+        # Mounting environment variable and placing in "~/.bashrc" file
+        echo "export MONGODB_URI=mongodb://${USER}:${PASSWD}@psmdb-${CONTAINER}:27017/${CONTAINER}?ssl=true" >> ~/.bashrc
+    else
+        echo "export DATABASE_USER_NAME=${USER}" >> ~/.bashrc
+        echo "export DATABASE_USER_PASSWORD=${PASSWD}" >> ~/.bashrc
+    fi
 
     # Executing "~/.bashrc" script to enable MONGODB_URI environment variable
     source ~/.bashrc
