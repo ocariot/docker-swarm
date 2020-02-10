@@ -9,10 +9,7 @@ read_json()
 # Function to get credentials to mount URI and to access PSMDB
 get_psmdb_credential()
 {
-    PS_NAME="PSMDB"
-    if [ "$(echo ${HOSTNAME} | grep missions)" ];then
-        PS_NAME="PSMYSQL"
-    fi
+    PS_NAME="$(echo ${HOSTNAME} | sed  's/-service//g')"
 
     RET_CREDENTIAL=1
     while [[ $RET_CREDENTIAL -ne 200 ]]; do
@@ -38,13 +35,18 @@ get_psmdb_credential()
     # Password received
     local PASSWD=$(read_json password ${CREDENTIAL})
 
-    if [ "${PS_NAME}" = "PSMDB" ]; then
-        # Mounting environment variable and placing in "~/.bashrc" file
-        echo "export MONGODB_URI=mongodb://${USER}:${PASSWD}@psmdb-${CONTAINER}:27017/${CONTAINER}?ssl=true" >> ~/.bashrc
-    else
+    if [ "${PS_NAME}" = "missions" ]; then
         echo "export DATABASE_USER_NAME=${USER}" >> ~/.bashrc
         echo "export DATABASE_USER_PASSWORD=${PASSWD}" >> ~/.bashrc
+    else
+        # Mounting environment variable and placing in "~/.bashrc" file
+        echo "export MONGODB_URI=mongodb://${USER}:${PASSWD}@psmdb-${CONTAINER}:27017/${CONTAINER}?ssl=true" >> ~/.bashrc
     fi
+
+    if [ "${PS_NAME}" = "notification" ]; then
+        echo "export MONGO_NOTIFICATION_DATABASE=${PS_NAME}" >> ~/.bashrc
+    fi
+
 
     # Executing "~/.bashrc" script to enable MONGODB_URI environment variable
     source ~/.bashrc
@@ -77,8 +79,13 @@ get_rabbitmq_credential()
     # Password received
     local PASSWD=$(read_json password ${CREDENTIAL})
 
-    # Mounting environment variable and placing in "~/.bashrc" file
-    echo "export RABBITMQ_URI=amqps://${USER}:${PASSWD}@rabbitmq:5671" >> ~/.bashrc
+    if [ "$(echo "${HOSTNAME}" | grep notification)" ];then
+          echo "export RABBITMQ_HOST=rabbitmq RABBITMQ_PORT=5671" \
+          "RABBITMQ_USERNAME=${USER} RABBITMQ_PASSWORD=${PASSWD} RABBITMQ_VHOST=ocariot" >> ~/.bashrc
+    else
+        # Mounting environment variable and placing in "~/.bashrc" file
+        echo "export RABBITMQ_URI=amqps://${USER}:${PASSWD}@rabbitmq:5671" >> ~/.bashrc
+    fi
 
     # Executing "~/.bashrc" script to enable RABBITMQ_URI environment variable
     source ~/.bashrc
