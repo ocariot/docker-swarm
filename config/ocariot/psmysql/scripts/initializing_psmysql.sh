@@ -81,8 +81,6 @@ USER=$(read_json user "${CREDENTIAL}")
 # Password admin
 PASSWD=$(read_json passwd "${CREDENTIAL}")
 
-echo "${USER} ${PASSWD}"
-
 # Removing temporarily file utilized in request
 rm /tmp/admin_credential.json
 
@@ -94,6 +92,7 @@ mysql <<EOF
 DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'mysql.infoschema', 'mysql.session');
 CREATE USER "${USER}"@"%" IDENTIFIED BY "${PASSWD}";
 GRANT ALL ON *.* TO "${USER}"@"%" WITH GRANT OPTION ;
+flush privileges;
 EOF
 
 # Function to realize token Revocation

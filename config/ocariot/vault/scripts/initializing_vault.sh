@@ -169,14 +169,14 @@ configure_plugin()
         # Creating the role that will be utilized to request a credential in respective PSMDB
         vault write database/roles/${DB}-service \
             db_name=$1 \
-            creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
+            creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED WITH mysql_native_password BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
             default_ttl=${TTL_PSMDB_USER} \
             max_ttl=${TTL_PSMDB_USER} > /dev/null
     fi
 
     # Verifying if the PSMDB was already initialized
     check_ps $1 ${PORT}
-    echo "$2 $3"
+
     # Trying establish connection with actual PSMDB
     local RET=1
     while [[ $RET -ne 0 ]]; do
