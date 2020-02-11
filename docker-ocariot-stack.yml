@@ -681,9 +681,10 @@ services:
       options:
         max-size: 100m
 
-  notification: # Container for OCARIoT Notification service
+  notification-service: # Container for OCARIoT Notification service
     hostname: notification-service
-    image: ocariot/notification:latest
+    image: notification:latest
+    user: root
     deploy:
       replicas: 1
       restart_policy:
@@ -695,26 +696,14 @@ services:
       - VAULT_PORT=${VAULT_PORT}
       - NODE_ENV=production
       - PORT_HTTPS=10001
-#      - MONGODB_URI=mongodb://${NOTIFICATION_DB_USER}:${NOTIFICATION_DB_PASS}@mongo-notification:27017/notification?ssl=true
-#      - MONGO_NOTIFICATION_DATABASE=notification
-#      - RABBITMQ_HOST=rabbitmq
-#      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-#      - RABBITMQ_USERNAME=${NOTIFICATION_RABBITMQ_USER}
-#      - RABBITMQ_PASSWORD=${NOTIFICATION_RABBITMQ_PASS}
-#      - RABBITMQ_VHOST=ocariot
       - KEYSTORE_PATH=/etc/.certs/certificate.p12
       - KEYSTORE_PASS=${KEYSTORE_PASS}
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/keys/firebase_keyfile.json
       - TRUSTSTORE_PATH=/usr/lib/jvm/java-1.8-openjdk/jre/lib/security/cacerts
-#    volumes:
-#      - ${SSL_KEY_PATH}:/etc/.certs/server.key:ro
-#      - ${SSL_CERT_PATH}:/etc/.certs/server.cert:ro
-#      - ${PKCS12_FILE_PATH}:/etc/.certs/certificate.p12:ro
-#      - ${FIREBASE_KEYFILE_PATH}:/etc/keys/firebase_keyfile.json:ro
     volumes:
+      - ${FIREBASE_KEYFILE_PATH}:/etc/keys/firebase_keyfile.json:ro
       - "./config/ocariot/vault/.tokens/access-token-notification-service:/tmp/access-token-notification-service"
     entrypoint: initializing_service.sh
-#    command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
@@ -734,7 +723,7 @@ services:
 
   missions:
     hostname: missions-service
-    image: ocariot/missions:1.11
+    image: ocariot/missions:latest
     deploy:
       replicas: 1
       restart_policy:
@@ -744,14 +733,13 @@ services:
     environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
       - VAULT_PORT=${VAULT_PORT}
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=8000
       - SSL_PORT=8001
       - DATABASE_DIALECT=mysql
       - DATABASE_HOST=psmysql-missions
-      - DATABASE_NAME=missions
       - DATABASE_PORT=3306
-      - DATABASE_SSL=false
+      - DATABASE_SSL=true
       - UPLOAD_VOLUME=/files/
     volumes:
       - "./config/ocariot/vault/.tokens/access-token-missions-service:/tmp/access-token-missions-service"

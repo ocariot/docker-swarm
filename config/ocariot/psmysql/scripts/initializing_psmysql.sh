@@ -89,6 +89,7 @@ check_psmysql
 
 # Establish connection with mongo and creating user admin
 mysql <<EOF
+create database $(echo ${HOSTNAME} | sed 's/psmysql-//g');
 DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'mysql.infoschema', 'mysql.session');
 CREATE USER "${USER}"@"%" IDENTIFIED BY "${PASSWD}";
 GRANT ALL ON *.* TO "${USER}"@"%" WITH GRANT OPTION ;

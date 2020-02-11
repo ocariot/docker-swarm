@@ -36,6 +36,7 @@ get_psmdb_credential()
     local PASSWD=$(read_json password ${CREDENTIAL})
 
     if [ "${PS_NAME}" = "missions" ]; then
+        echo "export DATABASE_NAME=${PS_NAME}" >> ~/.bashrc
         echo "export DATABASE_USER_NAME=${USER}" >> ~/.bashrc
         echo "export DATABASE_USER_PASSWORD=${PASSWD}" >> ~/.bashrc
     else
@@ -232,4 +233,9 @@ get_rabbitmq_credential
 unset VAULT_ACCESS_TOKEN
 
 # Starting service
-npm start
+if [ "$(echo "${HOSTNAME}" | grep notification)" ];then
+    chmod +x ./start.sh && ./start.sh
+else
+    npm start
+fi
+
