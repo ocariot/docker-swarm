@@ -681,7 +681,7 @@ services:
       options:
         max-size: 100m
 
-  notification-service: # Container for OCARIoT Notification service
+  notification: # Container for OCARIoT Notification service
     hostname: notification-service
     image: notification:latest
     user: root
@@ -696,10 +696,10 @@ services:
       - VAULT_PORT=${VAULT_PORT}
       - NODE_ENV=production
       - PORT_HTTPS=10001
-      - KEYSTORE_PATH=/etc/.certs/certificate.p12
-      - KEYSTORE_PASS=${KEYSTORE_PASS}
+      - KEYSTORE_PATH=/etc/.certs/tmp_keystore.p12
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/keys/firebase_keyfile.json
       - TRUSTSTORE_PATH=/usr/lib/jvm/java-1.8-openjdk/jre/lib/security/cacerts
+      - RABBITMQ_SSL=true
     volumes:
       - ${FIREBASE_KEYFILE_PATH}:/etc/keys/firebase_keyfile.json:ro
       - "./config/ocariot/vault/.tokens/access-token-notification-service:/tmp/access-token-notification-service"

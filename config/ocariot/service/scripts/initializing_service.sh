@@ -45,9 +45,31 @@ get_psmdb_credential()
     fi
 
     if [ "${PS_NAME}" = "notification" ]; then
-        echo "export MONGO_NOTIFICATION_DATABASE=${PS_NAME}" >> ~/.bashrc
-    fi
 
+        RET=1
+        while [[ $RET -ne 200 ]]; do
+            echo "=> Waiting for key store password for notification service..."
+            # Request to get access credential for PSMDB
+            RET=$(curl \
+                    --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
+                    --cacert /tmp/vault/ca.crt --silent \
+                    --output /tmp/keystore_pass.json -w "%{http_code}\n" \
+                    ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/keystore_pass)
+            # The requests are realized every 2 seconds
+            sleep 2
+        done
+
+        # Processing credentials received
+        CREDENTIAL=$(cat /tmp/keystore_pass.json)
+        rm /tmp/keystore_pass.json
+
+        # User received
+        local KEYSTORE_PASS=$(read_json value ${CREDENTIAL})
+
+        echo "export MONGO_NOTIFICATION_DATABASE=${PS_NAME} KEYSTORE_PASS=${KEYSTORE_PASS}" >> ~/.bashrc
+
+        keytool -import -file /etc/.certs/ca.crt -alias ca_vault -keystore ${TRUSTSTORE_PATH} -noprompt -storepass changeit > /dev/null
+    fi
 
     # Executing "~/.bashrc" script to enable MONGODB_URI environment variable
     source ~/.bashrc
