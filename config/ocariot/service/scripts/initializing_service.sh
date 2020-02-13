@@ -68,7 +68,9 @@ get_psmdb_credential()
 
         echo "export MONGO_NOTIFICATION_DATABASE=${PS_NAME} KEYSTORE_PASS=${KEYSTORE_PASS}" >> ~/.bashrc
 
-        keytool -import -file /etc/.certs/ca.crt -alias ca_vault -keystore ${TRUSTSTORE_PATH} -noprompt -storepass changeit > /dev/null
+        keytool -import -file /etc/.certs/ca.crt -alias ca_vault \
+          -keystore /usr/lib/jvm/java-1.8-openjdk/jre/lib/security/cacerts \
+          -noprompt -storepass changeit > /dev/null
     fi
 
     # Executing "~/.bashrc" script to enable MONGODB_URI environment variable
