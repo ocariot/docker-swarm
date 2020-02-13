@@ -300,6 +300,40 @@ services:
       options:
         max-size: 100m
 
+  psmdb-notification:
+    hostname: psmdb-notification
+    image: percona/percona-server-mongodb:latest
+    user: root
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
+    environment:
+      - VAULT_BASE_URL=${VAULT_BASE_URL}
+      - VAULT_PORT=${VAULT_PORT}
+    volumes:
+      - "psmdb-notification-data:/data/db"
+      - "./config/ocariot/vault/.tokens/access-token-psmdb-notification:/tmp/access-token-psmdb-notification"
+    command: initializing_psmdb.sh
+    configs:
+      - source: ocariot-mongo-config
+        target: /tmp/base_conf_mongod
+      - source: ocariot-init-psmdb-config
+        target: /usr/bin/initializing_psmdb.sh
+        mode: 0750
+    secrets:
+      - source: vault-ca-cert
+        target: /tmp/vault/ca.crt
+        mode: 0640
+    depends_on:
+      - vault
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
   psmysql-missions:
     hostname: psmysql-missions
     image: percona/percona-server:latest
@@ -647,6 +681,44 @@ services:
       options:
         max-size: 100m
 
+  notification: # Container for OCARIoT Notification service
+    hostname: notification-service
+    image: ocariot/notification:latest
+    user: root
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
+    environment:
+      - VAULT_BASE_URL=${VAULT_BASE_URL}
+      - VAULT_PORT=${VAULT_PORT}
+      - NODE_ENV=production
+      - PORT_HTTPS=10001
+      - GOOGLE_APPLICATION_CREDENTIALS=/etc/keys/firebase_keyfile.json
+      - RABBITMQ_SSL=true
+    volumes:
+      - ${FIREBASE_KEYFILE_PATH}:/etc/keys/firebase_keyfile.json:ro
+      - "./config/ocariot/vault/.tokens/access-token-notification-service:/tmp/access-token-notification-service"
+    entrypoint: initializing_service.sh
+    configs:
+      - source: ocariot-init-service-config
+        target: /usr/bin/initializing_service.sh
+        mode: 0750
+    secrets:
+      - source: vault-ca-cert
+        target: /tmp/vault/ca.crt
+        mode: 0640
+    depends_on:
+      - psmdb-notification
+      - rabbitmq
+      - vault
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
   missions:
     hostname: missions-service
     image: ocariot/missions:latest
@@ -659,14 +731,13 @@ services:
     environment:
       - VAULT_BASE_URL=${VAULT_BASE_URL}
       - VAULT_PORT=${VAULT_PORT}
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=8000
       - SSL_PORT=8001
       - DATABASE_DIALECT=mysql
       - DATABASE_HOST=psmysql-missions
-      - DATABASE_NAME=missions
       - DATABASE_PORT=3306
-      - DATABASE_SSL=false
+      - DATABASE_SSL=true
       - UPLOAD_VOLUME=/files/
     volumes:
       - "./config/ocariot/vault/.tokens/access-token-missions-service:/tmp/access-token-missions-service"
@@ -808,6 +879,8 @@ volumes:
     name: ocariot-psmdb-quest-data
   psmdb-gamification-data:
     name: ocariot-psmdb-gamification-data
+  psmdb-notification-data:
+    name: ocariot-psmdb-notification-data
   psmysql-missions-data:
     name: ocariot-psmysql-missions-data
   consul-data:

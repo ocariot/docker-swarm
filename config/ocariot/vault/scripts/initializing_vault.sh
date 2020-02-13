@@ -148,15 +148,9 @@ configure_plugin()
         DB=$(echo $1 | sed s/psmdb-//g)
         PORT="27017"
         PLUGIN_NAME="mongodb-database-plugin"
-        CONNECTION_URL="mongodb://{{username}}:{{password}}@$1:27017/admin"
-
-        # Creating the role that will be utilized to request a credential in respective PSMDB
-        vault write database/roles/${DB}-service \
-            db_name=$1 \
-            creation_statements='{ "db": "'${DB}'", "roles": [{ "role": "readWrite" }] }' \
-            revocation_statements='{ "db": "'${DB}'"}' \
-            default_ttl=${TTL_PSMDB_USER} \
-            max_ttl=${TTL_PSMDB_USER} > /dev/null
+        CONNECTION_URL="mongodb://{{username}}:{{password}}@$1:${PORT}/admin"
+        CREATION_STATEMENTS='{ "db": "'${DB}'", "roles": [{ "role": "readWrite" }] }'
+        REVOCATION_STATEMENTS='{ "db": "'${DB}'"}'
     fi
 
     if [ $(echo $1 | grep psmysql) ];then
@@ -164,14 +158,9 @@ configure_plugin()
         DB=$(echo $1 | sed s/psmysql-//g)
         PORT="3306"
         PLUGIN_NAME="mysql-database-plugin"
-        CONNECTION_URL="{{username}}:{{password}}@tcp($1:3306)/"
-
-        # Creating the role that will be utilized to request a credential in respective PSMDB
-        vault write database/roles/${DB}-service \
-            db_name=$1 \
-            creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED WITH mysql_native_password BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
-            default_ttl=${TTL_PSMDB_USER} \
-            max_ttl=${TTL_PSMDB_USER} > /dev/null
+        CONNECTION_URL="{{username}}:{{password}}@tcp($1:${PORT})/"
+        CREATION_STATEMENTS="CREATE USER '{{name}}'@'%' IDENTIFIED WITH mysql_native_password BY '{{password}}';GRANT ALL ON ${DB}.* TO '{{name}}'@'%';"
+        REVOCATION_STATEMENTS=""
     fi
 
     # Verifying if the PSMDB was already initialized
@@ -190,6 +179,14 @@ configure_plugin()
         RET=$?
         sleep 2
     done
+
+    # Creating the role that will be utilized to request a credential in respective PSMDB
+    vault write database/roles/${DB}-service \
+        db_name=$1 \
+        creation_statements="${CREATION_STATEMENTS}" \
+        revocation_statements="${REVOCATION_STATEMENTS}" \
+        default_ttl=${TTL_PSMDB_USER} \
+        max_ttl=${TTL_PSMDB_USER} > /dev/null
 }
 
 # Function used to generate encryption key used to encrypt data
@@ -448,12 +445,20 @@ create_encrypt_secret_key()
     vault kv put secret/account-service/encrypt-secret-key "value"="${KEY}"
 }
 
+create_keystore_pass()
+{
+    KEYSTORE_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
+    vault kv put secret/notification-service/keystore_pass "value"="${KEYSTORE_PASS}"
+}
+
 # Main Vault configuration stack
 main()
 {
     # Function responsible for setting up the
     # Vault environment and controlling system startup
     configure_vault
+
+    create_keystore_pass > /dev/null
 
     # Function used to enable and configure certificate issuance
     generate_certificates

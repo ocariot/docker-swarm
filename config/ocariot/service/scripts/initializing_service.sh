@@ -9,10 +9,7 @@ read_json()
 # Function to get credentials to mount URI and to access PSMDB
 get_psmdb_credential()
 {
-    PS_NAME="PSMDB"
-    if [ "$(echo ${HOSTNAME} | grep missions)" ];then
-        PS_NAME="PSMYSQL"
-    fi
+    PS_NAME="$(echo ${HOSTNAME} | sed  's/-service//g')"
 
     RET_CREDENTIAL=1
     while [[ $RET_CREDENTIAL -ne 200 ]]; do
@@ -38,12 +35,42 @@ get_psmdb_credential()
     # Password received
     local PASSWD=$(read_json password ${CREDENTIAL})
 
-    if [ "${PS_NAME}" = "PSMDB" ]; then
-        # Mounting environment variable and placing in "~/.bashrc" file
-        echo "export MONGODB_URI=mongodb://${USER}:${PASSWD}@psmdb-${CONTAINER}:27017/${CONTAINER}?ssl=true" >> ~/.bashrc
-    else
+    if [ "${PS_NAME}" = "missions" ]; then
+        echo "export DATABASE_NAME=${PS_NAME}" >> ~/.bashrc
         echo "export DATABASE_USER_NAME=${USER}" >> ~/.bashrc
         echo "export DATABASE_USER_PASSWORD=${PASSWD}" >> ~/.bashrc
+    else
+        # Mounting environment variable and placing in "~/.bashrc" file
+        echo "export MONGODB_URI=mongodb://${USER}:${PASSWD}@psmdb-${CONTAINER}:27017/${CONTAINER}?ssl=true" >> ~/.bashrc
+    fi
+
+    if [ "${PS_NAME}" = "notification" ]; then
+
+        RET=1
+        while [[ $RET -ne 200 ]]; do
+            echo "=> Waiting for key store password for notification service..."
+            # Request to get access credential for PSMDB
+            RET=$(curl \
+                    --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
+                    --cacert /tmp/vault/ca.crt --silent \
+                    --output /tmp/keystore_pass.json -w "%{http_code}\n" \
+                    ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/keystore_pass)
+            # The requests are realized every 2 seconds
+            sleep 2
+        done
+
+        # Processing credentials received
+        CREDENTIAL=$(cat /tmp/keystore_pass.json)
+        rm /tmp/keystore_pass.json
+
+        # User received
+        local KEYSTORE_PASS=$(read_json value ${CREDENTIAL})
+
+        echo "export MONGO_NOTIFICATION_DATABASE=${PS_NAME} KEYSTORE_PASS=${KEYSTORE_PASS}" >> ~/.bashrc
+
+        keytool -import -file /etc/.certs/ca.crt -alias ca_vault \
+          -keystore /usr/lib/jvm/java-1.8-openjdk/jre/lib/security/cacerts \
+          -noprompt -storepass changeit > /dev/null
     fi
 
     # Executing "~/.bashrc" script to enable MONGODB_URI environment variable
@@ -77,8 +104,13 @@ get_rabbitmq_credential()
     # Password received
     local PASSWD=$(read_json password ${CREDENTIAL})
 
-    # Mounting environment variable and placing in "~/.bashrc" file
-    echo "export RABBITMQ_URI=amqps://${USER}:${PASSWD}@rabbitmq:5671" >> ~/.bashrc
+    if [ "$(echo "${HOSTNAME}" | grep notification)" ];then
+          echo "export RABBITMQ_HOST=rabbitmq RABBITMQ_PORT=5671" \
+          "RABBITMQ_USERNAME=${USER} RABBITMQ_PASSWORD=${PASSWD} RABBITMQ_VHOST=ocariot" >> ~/.bashrc
+    else
+        # Mounting environment variable and placing in "~/.bashrc" file
+        echo "export RABBITMQ_URI=amqps://${USER}:${PASSWD}@rabbitmq:5671" >> ~/.bashrc
+    fi
 
     # Executing "~/.bashrc" script to enable RABBITMQ_URI environment variable
     source ~/.bashrc
@@ -225,4 +257,9 @@ get_rabbitmq_credential
 unset VAULT_ACCESS_TOKEN
 
 # Starting service
-npm start
+if [ "$(echo "${HOSTNAME}" | grep notification)" ];then
+    chmod +x ./start.sh && ./start.sh
+else
+    npm start
+fi
+
