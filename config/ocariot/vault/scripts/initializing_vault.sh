@@ -117,11 +117,13 @@ check_ps()
 generate_certificates()
 {
     # Enable certificate issuer plugin
-    vault secrets enable pki
-    # Changing global value of certificate expiration time
-    vault secrets tune -max-lease-ttl=${DEFAULT_MAX_TTL} -default-lease-ttl=${TTL_CERT} pki
-    # Enable Vault as CA-Root, which will sign the generated certificates
-    vault write pki/root/generate/internal common_name=ocariot ttl=${DEFAULT_MAX_TTL} > /dev/null
+    vault secrets enable pki 2> /dev/null
+    if [ $? = 0 ]; then
+      # Changing global value of certificate expiration time
+      vault secrets tune -max-lease-ttl=${DEFAULT_MAX_TTL} -default-lease-ttl=${TTL_CERT} pki
+      # Enable Vault as CA-Root, which will sign the generated certificates
+      vault write pki/root/generate/internal common_name=ocariot ttl=${DEFAULT_MAX_TTL} > /dev/null
+    fi
 
     # Creating role to generate certificates that will
     # be used for account and api-gateway as JWT keys
@@ -166,6 +168,13 @@ configure_plugin()
     # Verifying if the PSMDB was already initialized
     check_ps $1 ${PORT}
 
+    vault read database/config/$1 &> /dev/null
+
+    if [ $? = 0 ]; then
+      return
+    fi
+
+
     # Trying establish connection with actual PSMDB
     local RET=1
     while [[ $RET -ne 0 ]]; do
@@ -202,29 +211,27 @@ configure_psmdbs()
 
     # Creating admin users with its respective credentials
     for DATABASE in ${DATABASES}; do
+        if [ $(echo ${DATABASE} | grep psmdb) ];then
+          PATH_SECRET="secret"
+        fi
 
-        # Generating encryption key
-        ENCRYPTION_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
+        if [ $(echo ${DATABASE} | grep psmysql) ];then
+          PATH_SECRET="secret-v1"
+        fi
+
+        vault kv get ${PATH_SECRET}/${DATABASE}/credential > /dev/null
+
+        if [ $? = 0 ]; then
+          continue
+        fi
 
         # Defining user name based in PSMDB name
         local USER=$(echo ${DATABASE} | sed 's/psmdb-\|psmysql-//g')".app"
         # Generate password for admin user
         local PASSWD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
 
-        if [ $(echo ${DATABASE} | grep psmdb) ];then
-          # Saving the encrypt key as a secret in Vault
-          vault kv put secret/${DATABASE}/encryptionKey value=${ENCRYPTION_KEY} > /dev/null
-
-          # Saving the user and password generated as a secret in Vault
-          vault kv put secret/${DATABASE}/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
-        fi
-        if [ $(echo ${DATABASE} | grep psmysql) ];then
-          # Saving the encrypt key as a secret in Vault
-          vault kv put secret-v1/${DATABASE}/encryptionKey value=${ENCRYPTION_KEY} > /dev/null
-
-          # Saving the user and password generated as a secret in Vault
-          vault kv put secret-v1/${DATABASE}/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
-        fi
+        # Saving the user and password generated as a secret in Vault
+        vault kv put ${PATH_SECRET}/${DATABASE}/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
     done
 
     for DATABASE in ${DATABASES}; do
@@ -266,6 +273,12 @@ configure_rabbitmq_plugin()
     # Function to check if RabbitMQ was initialized
     check_rabbitmq
 
+    vault read rabbitmq/roles/read_write &> /dev/null
+
+    if [ $? = 0 ]; then
+      return
+    fi
+
     # Defining username for admin user
     local USER="ocariot"
     # Generate password for admin user
@@ -296,26 +309,12 @@ configure_rabbitmq_plugin()
     vault write rabbitmq/roles/read_write \
         vhosts='{"ocariot":{"configure": ".*", "write": ".*", "read": ".*"}}' > /dev/null
 
-    echo "Stack initialized successfully!!! :)"
-    wget -qO - https://pastebin.com/raw/jNnscFJX
 }
 
 # Function to remove all leases entered
 # in the first parameter of the function
 revoke_leases()
 {
-    # Function to check if RabbitMQ was initialized
-    check_rabbitmq
-
-    # Checking if all databases was initialized
-    local DATABASES=$(echo $(ls /etc/vault/policies/ | sed s/.hcl//g | grep psmdb))
-    for DATABASE in ${DATABASES}; do
-        # Function to check if PMSDBs was initialized
-        # It's necessary to pass the domain name where is localized the PMSDB,
-        # this is the first parameter of function
-        check_ps ${DATABASE} "27017"
-    done
-
     # Getting root access token
     ACCESSOR_ROOT=$(vault token lookup | grep accessor | sed 's/accessor*[ \t]*//g')
 
@@ -324,87 +323,19 @@ revoke_leases()
     printf "$1" | sed "/${ACCESSOR_ROOT}/d" | awk 'NR > 2{system("vault token revoke -accessor "$1)}'
 }
 
-# Function responsible for setting up the
-# Vault environment and controlling system startup
-configure_vault()
-{
-    # Function to check if vault was initialized
-    check_vault
-
-    # Checking if the Vault has been previously started
-    local INITIALIZED_BEFORE=$(vault status | grep "Initialized" | awk '{print $2}')
-
-    # If It has been previously started, only is necessary
-    # to unseal Vault, revoke the leases
-    # previously provided and generate new tokens
-    if [[ $INITIALIZED_BEFORE == "true" ]]
-    then
-        echo "Previously initialized"
-
-        # Function to unseal vault
-        unseal
-
-        # Function to check if HA Mode was initialized
-        check_ha_mode
-
-        # Authenticating user with root access token
-        root_user_authentication
-
-        # Function used to add a Vault CA certificate to the system, with
-        # this CA certificate Vault becomes trusted.
-        # It's necessary to enable RabbitMQ plugin
-        add_certificate
-
-        # Getting every access token that will be utilized
-        # to revoke the leases previously provided
-        TOKENS_TO_REVOKE=$(vault list /auth/token/accessors)
-
-        echo "Token Generation Enabled"
-
-
-        # Function to remove all leases entered
-        # in the first parameter of the function
-        revoke_leases "${TOKENS_TO_REVOKE}"
-
-        echo "Stack initialized successfully!!! :)"
-        wget -qO - https://pastebin.com/raw/jNnscFJX
-
-        # Finishing the script execution
-        exit
-    fi
-
-    echo "Not previously initialized"
-
-    # Activating the vault and generating unlock keys and root token
-    vault operator init -format="table" | grep -E "Unseal Key|Initial Root Token" > /etc/vault/.keys
-
-    # Function to unseal vault
-    unseal
-
-    # Function to check if HA Mode was initialized
-    check_ha_mode
-
-    # Authenticating user with root access token
-    root_user_authentication
-
-    # Enabling secrets enrollment in Vault
-    vault secrets enable -version=1 -path=secret-v1/ kv
-    vault secrets enable -version=2 -path=secret/ kv
-}
-
 # Function responsible to create the policies
 # that will be used in token generations
 generate_policies()
 {
     # Loading every policies
-    local CONTAINERS=$(ls /etc/vault/policies/ | sed s/.hcl//g)
+    POLICIES_DIRECTORY="/etc/vault/policies/"
+    CONTAINERS=$(ls ${POLICIES_DIRECTORY} | sed s/.hcl//g)
 
-    # Creating the policies that will be used in token generations
-    # Each police is mapped with the name registered in file
-    echo ${CONTAINERS} | awk '{ for(file=1; file<=NF; file++) {
-    system("vault policy write " $file " /etc/vault/policies/"$file".hcl")
-    } }' > dev/null
-
+    for CONTAINER in ${CONTAINERS};do
+      # Creating the policies that will be used in token generations
+      # Each police is mapped with the name registered in file
+      vault policy write ${CONTAINER} ${POLICIES_DIRECTORY}${CONTAINER}.hcl  > dev/null
+    done
 }
 
 # Function to create JWT keys that will be requested
@@ -412,6 +343,11 @@ generate_policies()
 # shared with the Api Gateway service.
 create_keys_jwt()
 {
+    vault kv get secret/api-gateway-service/jwt
+    if [ $? = 0 ]; then
+      return
+    fi
+
     # Issuing certificate keys that will be used as JWT
     # keys and saving temporarily in /tmp/keys_jwt file
     vault write pki/issue/jwt-account \
@@ -437,6 +373,11 @@ create_keys_jwt()
 # key that will be request for account service
 create_encrypt_secret_key()
 {
+    vault kv get secret/account-service/encrypt-secret-key
+    if [ $? = 0 ]; then
+      return
+    fi
+
     # Generating key that will utilized as
     # encrypt secret key in account service
     local KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
@@ -447,16 +388,54 @@ create_encrypt_secret_key()
 
 create_keystore_pass()
 {
+    vault kv get secret/notification-service/keystore_pass
+    if [ $? = 0 ]; then
+      return
+    fi
+
     KEYSTORE_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
     vault kv put secret/notification-service/keystore_pass "value"="${KEYSTORE_PASS}"
 }
 
-# Main Vault configuration stack
+# Function responsible for setting up the
+# Vault environment and controlling system startup
 main()
 {
-    # Function responsible for setting up the
-    # Vault environment and controlling system startup
-    configure_vault
+    # Function to check if vault was initialized
+    check_vault
+
+    # Checking if the Vault has been previously started
+    local INITIALIZED_BEFORE=$(vault status | grep "Initialized" | awk '{print $2}')
+
+    # If It hasn't been previously started, only is necessary
+    # to unseal Vault, revoke the leases
+    # previously provided and generate new tokens
+    if [[ $INITIALIZED_BEFORE == "false" ]]
+    then
+        echo "Not previously initialized"
+
+        # Activating the vault and generating unlock keys and root token
+        vault operator init -format="table" | grep -E "Unseal Key|Initial Root Token" > /etc/vault/.keys
+    else
+        echo "Previously initialized"
+    fi
+
+    # Function to unseal vault
+    unseal
+
+    # Function to check if HA Mode was initialized
+    check_ha_mode
+
+    # Authenticating user with root access token
+    root_user_authentication
+
+    # Enabling secrets enrollment in Vault
+    vault secrets enable -version=1 -path=secret-v1/ kv
+    vault secrets enable -version=2 -path=secret/ kv
+
+    # Getting every access token that will be utilized
+    # to revoke the leases previously provided
+    TOKENS_TO_REVOKE=$(vault list /auth/token/accessors)
 
     create_keystore_pass > /dev/null
 
@@ -486,6 +465,16 @@ main()
     # This function generates the admin user
     # credentials and active the RabbitMQ plugin.
     configure_rabbitmq_plugin
+
+    if [[ $INITIALIZED_BEFORE == "true" ]]
+    then
+        # Function to remove all leases entered
+        # in the first parameter of the function
+        revoke_leases "${TOKENS_TO_REVOKE}"
+    fi
+
+    echo "Stack initialized successfully!!! :)"
+    wget -qO - https://pastebin.com/raw/jNnscFJX
 }
 
 # Function to check if Consul was initialized

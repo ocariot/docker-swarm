@@ -130,17 +130,6 @@ token = ${VAULT_ACCESS_TOKEN}
 vault_ca = /tmp/vault/ca.crt
 EOF
 
-    RET_ENCRYPT_KEY=1
-    while [[ RET_ENCRYPT_KEY -ne 200 ]]; do
-        echo "=> Waiting Vault to create encrypt key..."
-        sleep 2
-        # Requesting admin user credentials to create user in PSMDB
-        RET_ENCRYPT_KEY=$(curl \
-                --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-                --cacert /tmp/vault/ca.crt --silent \
-                --output /dev/null -w "%{http_code}\n" \
-                ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret-v1/${HOSTNAME}/encryptionKey)
-    done
 }
 
 # Function to realize token Revocation
