@@ -1,5 +1,5 @@
 path "database/creds/missions-service" {
-  capabilities = ["read"]
+  capabilities = ["create", "read", "update", "delete", "list"]
 }
 
 path "rabbitmq/creds/read_write" {

@@ -7,5 +7,5 @@ path "pki/issue/psmdb-notification" {
 }
 
 path "secret/data/psmdb-notification/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read"]
 }

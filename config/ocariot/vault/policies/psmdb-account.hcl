@@ -7,5 +7,5 @@ path "pki/issue/psmdb-account" {
 }
 
 path "secret/data/psmdb-account/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read"]
 }

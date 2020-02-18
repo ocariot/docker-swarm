@@ -7,5 +7,5 @@ path "pki/issue/psmdb-gamification" {
 }
 
 path "secret/data/psmdb-gamification/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read"]
 }

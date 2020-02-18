@@ -7,5 +7,5 @@ path "pki/issue/psmdb-quest" {
 }
 
 path "secret/data/psmdb-quest/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read"]
 }

@@ -258,18 +258,16 @@ configure_psmdbs()
 # It's necessary to enable RabbitMQ plugin
 add_certificate()
 {
-    cat /etc/vault/.certs/ca.crt >> /etc/ssl/certs/ca-certificates.crt
+    mkdir -p /usr/share/ca-certificates/extra
+    cat /etc/rabbitmq/.certs/ca.cert >> /usr/share/ca-certificates/extra/ca_rabbitmq.crt
+    echo "extra/ca_rabbitmq.crt" >> /etc/ca-certificates.conf
+    update-ca-certificates
 }
 
 # This function generates the admin user
 # credentials and active the RabbitMQ plugin.
 configure_rabbitmq_plugin()
 {
-    # Function used to add the Vault CA certificate to the system, with
-    # this CA certificate Vault becomes trusted.
-    # Obs: This is necessary to enable RabbitMQ plugin
-    add_certificate
-
     # Function to check if RabbitMQ was initialized
     check_rabbitmq
 
@@ -426,12 +424,17 @@ main()
     # Function to check if HA Mode was initialized
     check_ha_mode
 
+    # Function used to add the RabbitMQ CA certificate to the system, with
+    # this CA certificate RabbitMQ becomes trusted.
+    # Obs: This is necessary to enable RabbitMQ plugin
+    add_certificate
+
     # Authenticating user with root access token
     root_user_authentication
 
     # Enabling secrets enrollment in Vault
-    vault secrets enable -version=1 -path=secret-v1/ kv
-    vault secrets enable -version=2 -path=secret/ kv
+    vault secrets enable -version=1 -path=secret-v1/ kv &> /dev/null
+    vault secrets enable -version=2 -path=secret/ kv &> /dev/null
 
     # Getting every access token that will be utilized
     # to revoke the leases previously provided

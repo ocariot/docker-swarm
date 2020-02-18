@@ -10,7 +10,7 @@ read_json()
 check_psmysql()
 {
     # Waiting for PSMYSQL to boot
-    while ! mysql -u root  -e ";" ; do
+    while [[ $(netstat -t -l -p --numeric-ports | grep -wc 3306) -eq 0 ]]; do
         echo "=> Waiting for confirmation of MySQL service startup..."
         # The attempts are realized in each 5 seconds
         sleep 5
@@ -60,7 +60,6 @@ get_certificates()
 add_user()
 {
 echo "Initializing user creating"
-    echo ${VAULT_ACCESS_TOKEN}
 RET_CREDENTIAL=1
 while [[ $RET_CREDENTIAL -ne 200 ]]; do
     echo "=> Waiting for Admin Credentials..."
@@ -129,7 +128,6 @@ secret_mount_point = secret-v1/psmysql-missions/encryptionKey
 token = ${VAULT_ACCESS_TOKEN}
 vault_ca = /tmp/vault/ca.crt
 EOF
-
 }
 
 # Function to realize token Revocation

@@ -7,5 +7,5 @@ path "pki/issue/psmdb-ds-agent" {
 }
 
 path "secret/data/psmdb-ds-agent/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read"]
 }
