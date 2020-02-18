@@ -134,7 +134,7 @@ VOLUMES_BKP=""
 RUNNING_SERVICES=""
 
 # Verifying if backup folder exist
-if [  "$1" = "restore" ] && [ "$(ls ${BKP_DIRECTORY} 2> /dev/null | wc -l)" = 0 ];
+if [  "$1" = "restore" ] && [ "$(ls ${BKP_DIRECTORY} 2> /dev/null | grep -P 'ocariot.*data' | wc -l)" = 0 ];
 then
     echo "No container backup was found"
     exit
@@ -144,11 +144,11 @@ if [ "${CONTAINERS_BKP}" = "" ]; then
 	if [ "$1" = "backup" ];
     then
         CONTAINERS_BKP=$(docker volume ls --format "{{.Name}}" --filter name=ocariot \
-            | sed 's/\(psmdb-\|ocariot-\|-data\|redis-\)//g')
+            | sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
     else
         CONTAINERS_BKP=$(ls ${BKP_DIRECTORY} \
             | grep -P 'ocariot.*data' \
-            | sed 's/\(psmdb-\|ocariot-\|-data\|redis-\)//g')
+            | sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
     fi
 fi
 
@@ -212,7 +212,7 @@ then
     RUNNING_SERVICES="${RUNNING_SERVICES} ${OCARIOT_STACK_NAME}_vault"
 fi
 
-if [ "$#" = "1" ];
+if [ "$#" = "1" ] && [ "$1" = "backup" ];
 then
     RUNNING_SERVICES=$(docker stack ps ${OCARIOT_STACK_NAME} --format {{.Name}} | sed 's/\..*//g')
 fi
@@ -233,7 +233,6 @@ docker run --rm \
     ${ENVIRONMENTS_TARGET} \
     blacklabelops/volumerize /bin/bash -c "${COMMAND}" \
     && PROCESS_BKP="OK"
-
 
 if [ "${PROCESS_BKP}" = "OK" ]; then
   RUNNING_SERVICES=$(echo ${RUNNING_SERVICES} | sed 's/ //g' )

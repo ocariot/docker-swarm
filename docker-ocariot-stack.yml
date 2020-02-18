@@ -54,6 +54,9 @@ services:
       - source: vault-server-cert
         target: /etc/vault/.certs/server.cert
         mode: 0660
+      - source: rabbitmq-ca-cert
+        target: /etc/rabbitmq/.certs/ca.cert
+        mode: 0660
     depends_on:
       - consul
     logging:

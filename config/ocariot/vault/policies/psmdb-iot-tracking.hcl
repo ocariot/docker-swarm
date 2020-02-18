@@ -7,5 +7,5 @@ path "pki/issue/psmdb-iot-tracking" {
 }
 
 path "secret/data/psmdb-iot-tracking/*" {
-  capabilities = ["read"]
+  capabilities = ["create", "read"]
 }

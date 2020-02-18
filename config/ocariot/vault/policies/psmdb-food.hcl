@@ -7,5 +7,5 @@ path "pki/issue/psmdb-food" {
 }
 
 path "secret/data/psmdb-food/*" {
-  capabilities = ["read"]
+  capabilities = ["create", "read"]
 }

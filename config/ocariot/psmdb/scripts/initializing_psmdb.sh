@@ -125,18 +125,6 @@ configure_environment()
     echo ${VAULT_ACCESS_TOKEN} > /tmp/psmdb-tokenFile
     # Setting the permission of the file containing the token
     chmod 0440 /tmp/psmdb-tokenFile
-
-    RET_ENCRYPT_KEY=1
-    while [[ RET_ENCRYPT_KEY -ne 200 ]]; do
-        echo "=> Waiting Vault to create encrypt key..."
-        sleep 2
-        # Requesting admin user credentials to create user in PSMDB
-        RET_ENCRYPT_KEY=$(curl \
-                --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-                --cacert /tmp/vault/ca.crt --silent \
-                --output /dev/null -w "%{http_code}\n" \
-                ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/encryptionKey)
-    done
 }
 
 # Function to realize token Revocation

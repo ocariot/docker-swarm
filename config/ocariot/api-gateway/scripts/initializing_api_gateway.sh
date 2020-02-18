@@ -17,7 +17,7 @@ get_public_jwt()
         sleep 2
         RET=$(curl \
                     --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-                    --cacert /tmp/vault/ca.crt  --silent \
+                    --cacert /tmp/vault/ca.crt --silent \
                     --output /tmp/jwt_public_key.json -w "%{http_code}\n" \
                     ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/jwt)
         echo ${RET}
