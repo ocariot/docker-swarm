@@ -22,19 +22,20 @@ set_variables_environment()
 display_stop_service()
 {
     # Verifying if the services was removed
-    RET=1
-    while [[ $RET -ne 0 ]]; do
-        RET=$(docker service ls --filter "name=$1" | tail -n +2 | wc -l)
+    printf "Stoping $1 service"
+    while [[ $(docker container ls --filter "name=$1" | tail -n +2 | wc -l) -ne 0 ]]; do
+        printf '.'
+        sleep 2
     done
-    echo "$1 service stopped."
+    printf '\n'
 }
 
 # Used for stop and update scripts. Depend of display_stop_service function
 remove_services()
 {
+    docker service rm $1 &> /dev/null
     for SERVICE in $1
     do
-        docker service rm ${SERVICE} &> /dev/null
         display_stop_service ${SERVICE}
     done
 }
