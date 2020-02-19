@@ -20,18 +20,15 @@ clear_volumes()
     done
 }
 
-remove_stack()
+remove_stack_config()
 {
     # Stopping the ocariot stack services  that being run
     docker stack rm ${OCARIOT_STACK_NAME} > /dev/null 2>&1
 
     # Verifying if the services was removed
-    printf "Stoping services"
-    RET=0
-    while [[ $RET -eq 0 ]]; do
-        docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
-        RET=$?
-        sleep 3
+    printf "Removing stack configurations"
+    while [[ $(docker stack ps ${OCARIOT_STACK_NAME} &> /dev/null; echo $?) -eq 0 ]]; do
+        sleep 2
         printf "."
     done
     printf "\n"
@@ -94,18 +91,18 @@ do
     RUNNING_SERVICES="${RUNNING_SERVICES} ${SERVICE_NAME}"
 done
 
-REMOVE_STACK=false
+REMOVE_STACK_CONFIG=false
 if [ "${SERVICES}" = "" ];
 then
     RUNNING_SERVICES=$(docker stack ps ${OCARIOT_STACK_NAME} --format {{.Name}} | sed 's/\..*//g')
-    REMOVE_STACK=true
+    REMOVE_STACK_CONFIG=true
 fi
 
-if ${REMOVE_STACK}; then
-    remove_stack
+remove_services "${RUNNING_SERVICES}"
+
+if ${REMOVE_STACK_CONFIG}; then
+    remove_stack_config
     clear_environment
-else
-    remove_services "${RUNNING_SERVICES}"
 fi
 
 # If "-clear-volumes" parameter was passed the
@@ -114,4 +111,3 @@ if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
     clear_volumes "${SERVICES}" &> /dev/null
     sudo rm -rf ${INSTALL_PATH}/config/ocariot/vault/.keys
 fi
-
