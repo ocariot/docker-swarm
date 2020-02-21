@@ -36,16 +36,19 @@ Repository with configuration files required for OCARIoT platform **deployment i
 4. Make sure that Swarm is enabled by typing `docker system info`, and looking for a message `Swarm: active` _(you might have to scroll up a little)_.
    - If Swarm isn’t running, simply type `docker swarm init` at a shell prompt to set it up.
 5. Valid SSL/TLS certificates issued by a valid certification authority (CA). You can get certified for your domain for free through [Let’s Encrypt](https://letsencrypt.org/).
+6. Ensure that the secure_path variable in the _/etc/sudoers_ file contains the path _/usr/local/bin_.
+7. Ensure that the `editor` command is configured with the standard editor used on the terminal. If not, add the editors used. Example, adding the `nano` editor: `sudo update-alternatives --install /usr/bin/editor editor /usr/bin/nano 100`.
+    - To choose the default editor use the command: `sudo update-alternatives --config editor`
 
 ## 1. Instalation
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.3.1/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.3.2/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.3.1/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.3.2/install.sh | sudo bash
 ```
 
 
