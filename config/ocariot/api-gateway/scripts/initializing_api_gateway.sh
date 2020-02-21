@@ -17,7 +17,7 @@ get_public_jwt()
         sleep 2
         RET=$(curl \
                     --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-                    --cacert /tmp/vault/ca.crt --silent \
+                    --silent \
                     --output /tmp/jwt_public_key.json -w "%{http_code}\n" \
                     ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/jwt)
         echo ${RET}
@@ -37,9 +37,25 @@ get_public_jwt()
     rm  /tmp/jwt_public_key.json
 }
 
+# Function used to add the Vault CA certificate to the system, with
+# this CA certificate Vault becomes trusted.
+# Obs: This is necessary to execute requests to the vault.
+add_ca_vault()
+{
+    mkdir -p /usr/share/ca-certificates/extra
+    cat /tmp/vault/ca.crt >> /usr/share/ca-certificates/extra/ca_vault.crt
+    echo "extra/ca_vault.crt" >> /etc/ca-certificates.conf
+    update-ca-certificates
+}
+
 # General function to monitor the receiving of access token from Vault
 configure_environment()
 {
+    # Function used to add the Vault CA certificate to the system, with
+    # this CA certificate Vault becomes trusted.
+    # Obs: This is necessary to execute requests to the vault.
+    add_ca_vault &> /dev/null
+
     # Waiting the access token to be generate.
     # Obs: Every access token file are mapped based in its respective hostname
     RET=$(sed 's/=/ /g' /tmp/access-token-${HOSTNAME} | awk '{print $3}')

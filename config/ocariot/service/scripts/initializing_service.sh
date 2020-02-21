@@ -19,7 +19,7 @@ get_psmdb_credential()
         # Request to get access credential for PSMDB
         RET_CREDENTIAL=$(curl \
                 --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-                --cacert /tmp/vault/ca.crt --silent \
+                --silent \
                 --output /tmp/psmdb_credential.json -w "%{http_code}\n" \
                 ${VAULT_BASE_URL}:${VAULT_PORT}/v1/database/creds/${HOSTNAME})
     done
@@ -52,7 +52,7 @@ get_psmdb_credential()
             # Request to get access credential for PSMDB
             RET=$(curl \
                     --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-                    --cacert /tmp/vault/ca.crt --silent \
+                    --silent \
                     --output /tmp/keystore_pass.json -w "%{http_code}\n" \
                     ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/keystore_pass)
             # The requests are realized every 2 seconds
@@ -91,7 +91,7 @@ get_rabbitmq_credential()
         # Request to get access credential for RabbitMQ
         RET_CREDENTIAL=$(curl \
                 --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-                --cacert /tmp/vault/ca.crt --silent \
+                --silent \
                 --output /tmp/rabbitmq_credential.json -w "%{http_code}\n" \
                 ${VAULT_BASE_URL}:${VAULT_PORT}/v1/rabbitmq/creds/read_write)
     done
@@ -132,7 +132,7 @@ get_certificates()
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --request POST \
             --data-binary "{\"common_name\": \"${HOSTNAME}\"}" \
-            --cacert /tmp/vault/ca.crt --silent \
+            --silent \
             --output /tmp/certificates.json -w "%{http_code}\n" \
             ${VAULT_BASE_URL}:${VAULT_PORT}/v1/pki/issue/${HOSTNAME})
     done
@@ -162,9 +162,25 @@ get_certificates()
     rm /tmp/certificates.json
 }
 
+# Function used to add the Vault CA certificate to the system, with
+# this CA certificate Vault becomes trusted.
+# Obs: This is necessary to execute requests to the vault.
+add_ca_vault()
+{
+    mkdir -p /usr/share/ca-certificates/extra
+    cat /tmp/vault/ca.crt >> /usr/share/ca-certificates/extra/ca_vault.crt
+    echo "extra/ca_vault.crt" >> /etc/ca-certificates.conf
+    update-ca-certificates
+}
+
 # General function to monitor the receiving of access token from Vault
 configure_environment()
 {
+    # Function used to add the Vault CA certificate to the system, with
+    # this CA certificate Vault becomes trusted.
+    # Obs: This is necessary to execute requests to the vault.
+    add_ca_vault &> /dev/null
+
     # Creating folder where all certificates will be placed
     mkdir -p /etc/.certs
 
@@ -199,14 +215,14 @@ get_jwt_encrypt_keys()
             # Request to get JWT keys from Vault
             JWT_RET=$(curl \
                     --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-                    --cacert /tmp/vault/ca.crt --silent \
+                    --silent \
                     --output /tmp/jwt_keys.json -w "%{http_code}\n" \
                     ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/jwt)
 
             # Request to get encrypt secret key from Vault
             ENCRYPT_SECRET_KEY_RET=$(curl \
                     --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-                    --cacert /tmp/vault/ca.crt --silent \
+                    --silent \
                     --output /tmp/encrypt_secret_key.json -w "%{http_code}\n" \
                     ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/encrypt-secret-key)
         done

@@ -11,7 +11,7 @@ add_user()
         # Requesting admin user credentials to create user in RabbitMq
         RET_CREDENTIAL=$(curl \
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
-            --cacert /tmp/vault/ca.crt --silent \
+            --silent \
             --output /tmp/admin_credential.json -w "%{http_code}\n" \
             ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/rabbitmq/credential)
     done
@@ -65,7 +65,7 @@ get_certificates()
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --request POST \
             --data-binary "{\"common_name\": \"rabbitmq\"}" \
-            --cacert /tmp/vault/ca.crt --silent \
+            --silent \
             --output /tmp/certificates.json -w "%{http_code}\n" \
             ${VAULT_BASE_URL}:${VAULT_PORT}/v1/pki/issue/rabbitmq)
 
@@ -84,9 +84,25 @@ get_certificates()
     rm /tmp/certificates.json
 }
 
+# Function used to add the Vault CA certificate to the system, with
+# this CA certificate Vault becomes trusted.
+# Obs: This is necessary to execute requests to the vault.
+add_ca_vault()
+{
+    mkdir -p /usr/share/ca-certificates/extra
+    cat /tmp/vault/ca.crt >> /usr/share/ca-certificates/extra/ca_vault.crt
+    echo "extra/ca_vault.crt" >> /etc/ca-certificates.conf
+    update-ca-certificates
+}
+
 # General function to monitor the receiving of access token from Vault
 configure_environment()
 {
+    # Function used to add the Vault CA certificate to the system, with
+    # this CA certificate Vault becomes trusted.
+    # Obs: This is necessary to execute requests to the vault.
+    add_ca_vault &> /dev/null
+
     # Waiting the access token to be generate.
     # Obs: Every access token file are mapped based in its respective hostname
     RET=$(sed 's/=/ /g' /tmp/access-token-rabbitmq | awk '{print $3}')
@@ -113,7 +129,7 @@ revoke_token()
         RET=$(curl \
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --request POST \
-            --cacert /tmp/vault/ca.crt --silent \
+            --silent \
             ${VAULT_BASE_URL}:${VAULT_PORT}/v1/auth/token/revoke-self -w "%{http_code}\n")
     done
 
