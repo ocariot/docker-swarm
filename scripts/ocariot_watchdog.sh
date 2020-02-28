@@ -45,8 +45,8 @@ docker events \
     --filter 'event=create' \
     --format '{{json .Actor.Attributes.name}} {{json .Action}}' \
     | while read event; do
-        docker stack ps ${OCARIOT_STACK_NAME} &> /dev/null
-        if [ $? = 0  ];
+        RET=$(docker stack ls --format={{.Name}} | grep ${OCARIOT_STACK_NAME})
+        if [ "${RET}" ];
         then
             EVENT=$(echo ${event} \
                     | sed 's/"//g')

@@ -102,7 +102,11 @@ case $1 in
   monitor)
     monitor_options $(echo $@ | sed "s/$1 //g")
 		;;
-	*)
+  version)
+    echo "Version: $(git -C ${INSTALL_PATH} describe --tags --abbrev=0)"
+    exit
+    ;;
+  *)
 		ocariot_help
 		;;
 esac

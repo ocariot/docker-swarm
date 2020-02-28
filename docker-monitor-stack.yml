@@ -6,19 +6,27 @@ networks:
     attachable: true
 
 volumes:
-    prometheus: {}
-    grafana: {}
-    alertmanager: {}
+  prometheus: {}
+  grafana: {}
+  alertmanager: {}
+
+secrets:
+  grafana-server-key:
+    file: .certs/server.key
+  grafana-server-cert:
+    file: .certs/server.crt
 
 configs:
-  caddy_config:
-    file: config/monitor/caddy/Caddyfile
   dockerd_config:
     file: config/monitor/dockerd-exporter/Caddyfile
   node_rules:
     file: config/monitor/prometheus/rules/swarm_node.rules.yml
   task_rules:
     file: config/monitor/prometheus/rules/swarm_task.rules.yml
+  ocariot-grafana-config:
+    file: config/monitor/grafana/grafana.ini
+  ocariot-init-grafana-config:
+    file: config/monitor/grafana/scripts/initializing_grafana.sh
 
 services:
   dockerd-exporter:
@@ -58,6 +66,7 @@ services:
           memory: 64M
 
   grafana:
+    hostname: grafana
     image: stefanprodan/swarmprom-grafana:5.3.4
     networks:
       - net
@@ -72,11 +81,33 @@ services:
       #- GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
       #- GF_SMTP_USER=${GF_SMTP_USER}
       #- GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+    ports:
+      - "3000:3200"
+    secrets:
+      - source: grafana-server-key
+        target: /etc/.certs/server.key
+        mode: 0444
+      - source: grafana-server-cert
+        target: /etc/.certs/server.crt
+        mode: 0444
+    configs:
+      - source: ocariot-grafana-config
+        target: /etc/grafana/grafana.ini
+        mode: 0444
+      - source: ocariot-init-grafana-config
+        target: /usr/bin/initializing_grafana.sh
+        mode: 0755
     volumes:
       - grafana:/var/lib/grafana
+      - "./config/ocariot/vault/.tokens/access-token-grafana:/tmp/access-token-grafana"
+    entrypoint: initializing_grafana.sh
     deploy:
       mode: replicated
       replicas: 1
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
       placement:
         constraints:
           - node.role == manager
@@ -172,35 +203,3 @@ services:
           memory: 2048M
         reservations:
           memory: 128M
-
-  caddy:
-    image: stefanprodan/caddy
-    ports:
-      - "3000:3000"
-      - "9090:9090"
-      - "9093:9093"
-      - "9094:9094"
-    networks:
-      - net
-    environment:
-      - ADMIN_USER=${ADMIN_USER:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-    configs:
-      - source: caddy_config
-        target: /etc/caddy/Caddyfile
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 5s
-      timeout: 1s
-      retries: 5
