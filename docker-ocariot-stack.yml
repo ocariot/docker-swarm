@@ -433,8 +433,9 @@ services:
       - DS_AGENT_SERVICE=https://ds-agent:5001
       - QUESTIONNAIRE_SERVICE=https://quest:6001
       - GAMIFICATION_SERVICE=https://gamification:7001
-      - MISSION_SERVICE=https://gamification:7001
-      - FOOD_SERVICE=https://food:8001
+      - MISSIONS_SERVICE=https://missions:8001
+      - FOOD_SERVICE=https://food:9001
+      - NOTIFICATION_SERVICE=https://notification:10001
       - EMULATE_REDIS=false
       - PORT_REDIS=6379
       - HOST_REDIS=redis-api-gateway
