@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Function utilized to read JSON
+read_json()
+{
+   echo $2 | grep -Po "\"$1\":.*?[^\\\]\"" | sed "s/\\\"//g;s/,//g;s/$1://g"
+}
+
 # Function to get server certificates from Vault
 get_certificates()
 {

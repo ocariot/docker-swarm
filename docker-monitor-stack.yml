@@ -1,38 +1,10 @@
-version: "3.3"
-
-networks:
-  net:
-    driver: overlay
-    attachable: true
-
-volumes:
-  prometheus: {}
-  grafana: {}
-  alertmanager: {}
-
-secrets:
-  grafana-server-key:
-    file: .certs/server.key
-  grafana-server-cert:
-    file: .certs/server.crt
-
-configs:
-  dockerd_config:
-    file: config/monitor/dockerd-exporter/Caddyfile
-  node_rules:
-    file: config/monitor/prometheus/rules/swarm_node.rules.yml
-  task_rules:
-    file: config/monitor/prometheus/rules/swarm_task.rules.yml
-  ocariot-grafana-config:
-    file: config/monitor/grafana/grafana.ini
-  ocariot-init-grafana-config:
-    file: config/monitor/grafana/scripts/initializing_grafana.sh
+version: "3.7"
 
 services:
   dockerd-exporter:
     image: stefanprodan/caddy
     networks:
-      - net
+      - ocariot
     environment:
       - DOCKER_GWBRIDGE_IP=172.18.0.1
     configs:
@@ -46,10 +18,11 @@ services:
         reservations:
           memory: 64M
 
+  # Containers metrics collector
   cadvisor:
     image: google/cadvisor
     networks:
-      - net
+      - ocariot
     command: -logtostderr -docker_only
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -65,15 +38,19 @@ services:
         reservations:
           memory: 64M
 
+  # Visualize metrics
   grafana:
     hostname: grafana
     image: stefanprodan/swarmprom-grafana:5.3.4
+    user: root
     networks:
-      - net
+      - ocariot
     environment:
       - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - VAULT_BASE_URL=${VAULT_BASE_URL}
+      - VAULT_PORT=${VAULT_PORT}
       #- GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-localhost}
       #- GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
       #- GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS:-grafana@test.com}
@@ -82,13 +59,10 @@ services:
       #- GF_SMTP_USER=${GF_SMTP_USER}
       #- GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
     ports:
-      - "3000:3200"
+      - 3200:3000
     secrets:
-      - source: grafana-server-key
-        target: /etc/.certs/server.key
-        mode: 0444
-      - source: grafana-server-cert
-        target: /etc/.certs/server.crt
+      - source: vault-ca-cert
+        target: /tmp/vault/ca.crt
         mode: 0444
     configs:
       - source: ocariot-grafana-config
@@ -117,45 +91,48 @@ services:
         reservations:
           memory: 64M
 
-  alertmanager:
-    image: stefanprodan/swarmprom-alertmanager:v0.14.0
-    networks:
-      - net
-    environment:
-      - SLACK_URL=${SLACK_URL:-https://hooks.slack.com/services/TOKEN}
-      - SLACK_CHANNEL=${SLACK_CHANNEL:-general}
-      - SLACK_USER=${SLACK_USER:-alertmanager}
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-    volumes:
-      - alertmanager:/alertmanager
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
+  # Alerts dispatcher
+#  alertmanager:
+#    image: stefanprodan/swarmprom-alertmanager:v0.14.0
+#    networks:
+#      - ocariot
+#    environment:
+#      - SLACK_URL=${SLACK_URL:-https://hooks.slack.com/services/TOKEN}
+#      - SLACK_CHANNEL=${SLACK_CHANNEL:-general}
+#      - SLACK_USER=${SLACK_USER:-alertmanager}
+#    command:
+#      - '--config.file=/etc/alertmanager/alertmanager.yml'
+#      - '--storage.path=/alertmanager'
+#    volumes:
+#      - alertmanager:/alertmanager
+#    deploy:
+#      mode: replicated
+#      replicas: 1
+#      placement:
+#        constraints:
+#          - node.role == manager
+#      resources:
+#        limits:
+#          memory: 128M
+#        reservations:
+#          memory: 64M
 
-  unsee:
-    image: cloudflare/unsee:v0.8.0
-    networks:
-      - net
-    environment:
-      - "ALERTMANAGER_URIS=default:http://alertmanager:9093"
-    deploy:
-      mode: replicated
-      replicas: 1
+#  # Alert manager dashboard
+#  unsee:
+#    image: cloudflare/unsee:v0.8.0
+#    networks:
+#      - ocariot
+#    environment:
+#      - "ALERTMANAGER_URIS=default:http://alertmanager:9093"
+#    deploy:
+#      mode: replicated
+#      replicas: 1
 
+  # Host metrics collector
   node-exporter:
     image: stefanprodan/swarmprom-node-exporter:v0.16.0
     networks:
-      - net
+      - ocariot
     environment:
       - NODE_ID={{.Node.ID}}
     volumes:
@@ -177,10 +154,11 @@ services:
         reservations:
           memory: 64M
 
+  # Metrics database
   prometheus:
     image: stefanprodan/swarmprom-prometheus:v2.5.0
     networks:
-      - net
+      - ocariot
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -203,3 +181,33 @@ services:
           memory: 2048M
         reservations:
           memory: 128M
+    ports:
+      - 9090:9090
+
+secrets:
+  vault-ca-cert:
+    file: ${VAULT_CA_CERT_PATH}
+
+configs:
+  dockerd_config:
+    file: config/monitor/dockerd-exporter/Caddyfile
+  node_rules:
+    file: config/monitor/prometheus/rules/swarm_node.rules.yml
+  task_rules:
+    file: config/monitor/prometheus/rules/swarm_task.rules.yml
+  ocariot-grafana-config:
+    file: config/monitor/grafana/grafana.ini
+  ocariot-init-grafana-config:
+    file: config/monitor/grafana/scripts/initializing_grafana.sh
+
+volumes:
+  prometheus: {}
+  grafana: {}
+  alertmanager: {}
+
+networks:
+  ocariot:
+    external: true
+    name: ocariot
+    driver_opts:
+      encrypted: "true"

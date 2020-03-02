@@ -59,6 +59,8 @@ services:
         mode: 0660
     depends_on:
       - consul
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -94,6 +96,8 @@ services:
         mode: 0660
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -128,6 +132,8 @@ services:
         mode: 0640
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -162,6 +168,8 @@ services:
         mode: 0640
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -196,6 +204,8 @@ services:
         mode: 0640
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -230,6 +240,8 @@ services:
         mode: 0640
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -264,6 +276,8 @@ services:
         mode: 0640
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -298,6 +312,8 @@ services:
         mode: 0640
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -332,6 +348,8 @@ services:
         mode: 0640
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -368,6 +386,8 @@ services:
         mode: 0644
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -386,6 +406,8 @@ services:
       - "redis-api-gateway-data:/data"
       - "./config/ocariot/redisdb/redis.conf:/etc/redis.conf"
     command: ["redis-server", "/etc/redis.conf"]
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -404,6 +426,8 @@ services:
       - "redis-ds-agent-data:/data"
       - "./config/ocariot/redisdb/redis.conf:/etc/redis.conf"
     command: ["redis-server", "/etc/redis.conf"]
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -462,6 +486,8 @@ services:
     depends_on:
       - redis-api-gateway
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -500,6 +526,8 @@ services:
       - psmdb-account
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -535,6 +563,8 @@ services:
       - psmdb-iot-tracking
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -575,6 +605,8 @@ services:
       - redis-ds-agent
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -610,6 +642,8 @@ services:
       - psmdb-quest
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -645,6 +679,8 @@ services:
       - psmdb-gamification
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -680,6 +716,8 @@ services:
       - psmdb-food
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -718,6 +756,8 @@ services:
       - psmdb-notification
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -758,6 +798,8 @@ services:
       - psmysql-missions
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -807,6 +849,8 @@ services:
         mode: 0660
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -895,3 +939,10 @@ volumes:
     name: ocariot-redis-api-gateway-data
   redis-ds-agent-data:
     name: ocariot-redis-ds-agent-data
+
+networks:
+  ocariot:
+    name: ocariot
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
