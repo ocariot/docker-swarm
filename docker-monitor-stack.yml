@@ -1,43 +1,6 @@
 version: "3.7"
 
 services:
-  dockerd-exporter:
-    image: stefanprodan/caddy
-    networks:
-      - ocariot
-    environment:
-      - DOCKER_GWBRIDGE_IP=172.18.0.1
-    configs:
-      - source: dockerd_config
-        target: /etc/caddy/Caddyfile
-    deploy:
-      mode: global
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
-  # Containers metrics collector
-  cadvisor:
-    image: google/cadvisor
-    networks:
-      - ocariot
-    command: -logtostderr -docker_only
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /:/rootfs:ro
-      - /var/run:/var/run
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    deploy:
-      mode: global
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
   # Visualize metrics
   grafana:
     hostname: grafana
@@ -51,13 +14,10 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
       - VAULT_BASE_URL=${VAULT_BASE_URL}
       - VAULT_PORT=${VAULT_PORT}
-      #- GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-localhost}
-      #- GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
-      #- GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS:-grafana@test.com}
-      #- GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME:-Grafana}
-      #- GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
-      #- GF_SMTP_USER=${GF_SMTP_USER}
-      #- GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+      - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
+      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
+      - GF_SMTP_USER=${GF_SMTP_USER}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
     ports:
       - 3200:3000
     secrets:
@@ -91,46 +51,49 @@ services:
         reservations:
           memory: 64M
 
-  # Alerts dispatcher
-#  alertmanager:
-#    image: stefanprodan/swarmprom-alertmanager:v0.14.0
-#    networks:
-#      - ocariot
-#    environment:
-#      - SLACK_URL=${SLACK_URL:-https://hooks.slack.com/services/TOKEN}
-#      - SLACK_CHANNEL=${SLACK_CHANNEL:-general}
-#      - SLACK_USER=${SLACK_USER:-alertmanager}
-#    command:
-#      - '--config.file=/etc/alertmanager/alertmanager.yml'
-#      - '--storage.path=/alertmanager'
-#    volumes:
-#      - alertmanager:/alertmanager
-#    deploy:
-#      mode: replicated
-#      replicas: 1
-#      placement:
-#        constraints:
-#          - node.role == manager
-#      resources:
-#        limits:
-#          memory: 128M
-#        reservations:
-#          memory: 64M
+  dockerd-exporter:
+    image: stefanprodan/caddy
+    networks:
+      - ocariot
+    environment:
+      - DOCKER_GWBRIDGE_IP=172.18.0.1
+#    entrypoint: /bin/sh -c "while true; do sleep 1; done"
+    configs:
+      - source: dockerd_config
+        target: /etc/caddy/Caddyfile
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
 
-#  # Alert manager dashboard
-#  unsee:
-#    image: cloudflare/unsee:v0.8.0
-#    networks:
-#      - ocariot
-#    environment:
-#      - "ALERTMANAGER_URIS=default:http://alertmanager:9093"
-#    deploy:
-#      mode: replicated
-#      replicas: 1
+  # Containers metrics collector
+  cadvisor:
+    image: google/cadvisor
+    networks:
+      - ocariot
+    command: -logtostderr -docker_only
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
 
   # Host metrics collector
   node-exporter:
-    image: stefanprodan/swarmprom-node-exporter:v0.16.0
+    image: prom/node-exporter:v1.0.0-rc.0
+    user: root
     networks:
       - ocariot
     environment:
@@ -140,6 +103,11 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
       - /etc/hostname:/etc/nodename
+    configs:
+      - source: ocariot-init-node-exporter-config
+        target: /etc/node-exporter/docker-entrypoint.sh
+        mode: 0755
+    entrypoint: /etc/node-exporter/docker-entrypoint.sh
     command:
       - '--path.sysfs=/host/sys'
       - '--path.procfs=/host/proc'
@@ -199,6 +167,8 @@ configs:
     file: config/monitor/grafana/grafana.ini
   ocariot-init-grafana-config:
     file: config/monitor/grafana/scripts/initializing_grafana.sh
+  ocariot-init-node-exporter-config:
+    file: config/monitor/node-exporter/conf/docker-entrypoint.sh
 
 volumes:
   prometheus: {}

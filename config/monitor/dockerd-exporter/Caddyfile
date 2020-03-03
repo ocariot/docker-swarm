@@ -1,5 +1,5 @@
 :9323 {
-    proxy / {$DOCKER_GWBRIDGE_IP}:9323 {
+    proxy / 172.18.0.1:9323 {
             transparent
         }
 
