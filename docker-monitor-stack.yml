@@ -4,7 +4,7 @@ services:
   # Visualize metrics
   grafana:
     hostname: grafana
-    image: stefanprodan/swarmprom-grafana:5.3.4
+    image: grafana/grafana:6.6.2
     user: root
     networks:
       - ocariot
@@ -27,6 +27,9 @@ services:
     configs:
       - source: ocariot-grafana-config
         target: /etc/grafana/grafana.ini
+        mode: 0444
+      - source: ocariot-prom-data-src-grafana-config
+        target: /etc/grafana/provisioning/datasources/prom_data_src.yaml
         mode: 0444
       - source: ocariot-init-grafana-config
         target: /usr/bin/initializing_grafana.sh
@@ -51,30 +54,12 @@ services:
         reservations:
           memory: 64M
 
-  dockerd-exporter:
-    image: stefanprodan/caddy
-    networks:
-      - ocariot
-    environment:
-      - DOCKER_GWBRIDGE_IP=172.18.0.1
-#    entrypoint: /bin/sh -c "while true; do sleep 1; done"
-    configs:
-      - source: dockerd_config
-        target: /etc/caddy/Caddyfile
-    deploy:
-      mode: global
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
   # Containers metrics collector
   cadvisor:
     image: google/cadvisor
     networks:
       - ocariot
-    command: -logtostderr -docker_only
+    command: -docker_only
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /:/rootfs:ro
@@ -102,7 +87,7 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-      - /etc/hostname:/etc/nodename
+      - /etc/hostname:/etc/nodename:ro
     configs:
       - source: ocariot-init-node-exporter-config
         target: /etc/node-exporter/docker-entrypoint.sh
@@ -127,17 +112,16 @@ services:
     image: stefanprodan/swarmprom-prometheus:v2.5.0
     networks:
       - ocariot
+    entrypoint: /bin/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--config.file=/etc/prometheus/config.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention=${PROMETHEUS_RETENTION:-24h}'
     volumes:
       - prometheus:/prometheus
     configs:
-      - source: node_rules
-        target: /etc/prometheus/swarm_node.rules.yml
-      - source: task_rules
-        target: /etc/prometheus/swarm_task.rules.yml
+      - source: ocariot-prometheus-config
+        target: /etc/prometheus/config.yml
     deploy:
       mode: replicated
       replicas: 1
@@ -157,23 +141,20 @@ secrets:
     file: ${VAULT_CA_CERT_PATH}
 
 configs:
-  dockerd_config:
-    file: config/monitor/dockerd-exporter/Caddyfile
-  node_rules:
-    file: config/monitor/prometheus/rules/swarm_node.rules.yml
-  task_rules:
-    file: config/monitor/prometheus/rules/swarm_task.rules.yml
+  ocariot-prometheus-config:
+    file: config/monitor/prometheus/config.yml
   ocariot-grafana-config:
     file: config/monitor/grafana/grafana.ini
+  ocariot-prom-data-src-grafana-config:
+    file: config/monitor/grafana/prom_data_src.yaml
   ocariot-init-grafana-config:
     file: config/monitor/grafana/scripts/initializing_grafana.sh
   ocariot-init-node-exporter-config:
-    file: config/monitor/node-exporter/conf/docker-entrypoint.sh
+    file: config/monitor/node-exporter/docker-entrypoint.sh
 
 volumes:
   prometheus: {}
   grafana: {}
-  alertmanager: {}
 
 networks:
   ocariot:

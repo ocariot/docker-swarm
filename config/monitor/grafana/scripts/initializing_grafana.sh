@@ -79,6 +79,8 @@ configure_environment()
     > /tmp/access-token-${HOSTNAME}
 }
 
+apk add --no-cache curl grep
+
 # General function to monitor the receiving of access token from Vault
 configure_environment
 
