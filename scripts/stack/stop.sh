@@ -11,12 +11,21 @@ clear_volumes()
             --filter "name=-$(echo $1 | sed 's/ /|-/g')")
     else
         VOLUMES=$(docker volume ls --format {{.Name}} |
-            grep -P '(?<=ocariot-).*(?=-data)')
+            grep -P '(?<=ocariot-).*(?=-data)' |
+            grep -v "$(echo ${MONITOR_STACK_NAME} | sed 's/_/-/g')")
     fi
 
     for VOLUME in ${VOLUMES}
     do
-        docker volume rm -f ${VOLUME}
+        RET=1
+        printf "Removing Volume: ${VOLUME}"
+        while [[ ${RET} -ne 0 ]]
+        do
+            printf "."
+            docker volume rm ${VOLUME} -f &> /dev/null
+            RET=$?
+        done
+        printf "\n"
     done
 }
 
@@ -63,15 +72,12 @@ if ([ "$1" != "--services" ] && [ "$1" != "--clear-volumes" ] && [ "$1" != "" ])
     stack_help
 fi
 
-docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
-STATUS_OCARIOT_STACK=$?
-
-if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
+if [ ! "$(docker stack ls | grep ${OCARIOT_STACK_NAME})" ]; then
   echo "The ${OCARIOT_STACK_NAME} stack is not active."
-  # If "-clear-volumes" parameter was passed the
+  # If "--clear-volumes" parameter was passed the
   # volumes will be excluded
   if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
-      clear_volumes "${SERVICES}" &> /dev/null
+      clear_volumes "${SERVICES}"
       sudo rm -rf ${INSTALL_PATH}/config/ocariot/vault/.keys
   fi
   exit
@@ -108,6 +114,6 @@ fi
 # If "-clear-volumes" parameter was passed the
 # volumes will be excluded
 if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
-    clear_volumes "${SERVICES}" &> /dev/null
+    clear_volumes "${SERVICES}"
     sudo rm -rf ${INSTALL_PATH}/config/ocariot/vault/.keys
 fi

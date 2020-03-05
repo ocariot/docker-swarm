@@ -75,14 +75,9 @@ fi
 
 case $1 in
   uninstall)
-		COMMAND="/scripts/stack/uninstall.sh $(echo $@ | sed "s/$1//g")"
+		COMMAND="/scripts/uninstall.sh $(echo $@ | sed "s/$1//g")"
 		;;
   update)
-    if [ "$EUID" -ne 0 ]; then
-      echo "Please run as root"
-      exit
-    fi
-
     LAST_TAG=$(get_last_tag)
     sudo git -C ${INSTALL_PATH} reset --hard HEAD &> /dev/null
     sudo git -C ${INSTALL_PATH} fetch &> /dev/null

@@ -45,11 +45,12 @@ fi
 WATCHDOG_COMMAND="ocariot_watchdog.sh"
 BKP_COMMAND="ocariot stack backup"
 
-docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
-STATUS_OCARIOT_STACK=$?
-
-if ([ "${STATUS_OCARIOT_STACK}" -eq 0 ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" ]); then
+if ([ "$(docker stack ls | grep ${OCARIOT_STACK_NAME})" ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" ]); then
   ${INSTALL_PATH}/scripts/stack/stop.sh ${CHECK_CLEAR_VOLUMES_PARAMETER}
+fi
+
+if ([ "$(docker stack ls | grep ${MONITOR_STACK_NAME})" ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" ]); then
+  ${INSTALL_PATH}/scripts/monitor/stop.sh ${CHECK_CLEAR_VOLUMES_PARAMETER}
 fi
 
 sudo rm -f /usr/local/bin/ocariot

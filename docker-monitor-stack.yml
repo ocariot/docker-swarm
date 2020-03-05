@@ -6,38 +6,6 @@ services:
     hostname: grafana
     image: grafana/grafana:6.6.2
     user: root
-    networks:
-      - ocariot
-    environment:
-      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
-      - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
-      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
-      - GF_SMTP_USER=${GF_SMTP_USER}
-      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
-    ports:
-      - 3200:3000
-    secrets:
-      - source: vault-ca-cert
-        target: /tmp/vault/ca.crt
-        mode: 0444
-    configs:
-      - source: ocariot-grafana-config
-        target: /etc/grafana/grafana.ini
-        mode: 0444
-      - source: ocariot-prom-data-src-grafana-config
-        target: /etc/grafana/provisioning/datasources/prom_data_src.yaml
-        mode: 0444
-      - source: ocariot-init-grafana-config
-        target: /usr/bin/initializing_grafana.sh
-        mode: 0755
-    volumes:
-      - grafana:/var/lib/grafana
-      - "./config/ocariot/vault/.tokens/access-token-grafana:/tmp/access-token-grafana"
-    entrypoint: initializing_grafana.sh
     deploy:
       mode: replicated
       replicas: 1
@@ -48,17 +16,86 @@ services:
       placement:
         constraints:
           - node.role == manager
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - VAULT_BASE_URL=${VAULT_BASE_URL}
+      - VAULT_PORT=${VAULT_PORT}
+      - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
+      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
+      - GF_SMTP_USER=${GF_SMTP_USER}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+    entrypoint: initializing_grafana.sh
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - "./config/ocariot/vault/.tokens/access-token-grafana:/tmp/access-token-grafana"
+    ports:
+      - 3200:3000
+    configs:
+      - source: ocariot-grafana-config
+        target: /etc/grafana/grafana.ini
+        mode: 0444
+      - source: ocariot-prom-data-src-grafana-config
+        target: /etc/grafana/provisioning/datasources/prom_data_src.yaml
+        mode: 0444
+      - source: ocariot-init-grafana-config
+        target: /usr/bin/initializing_grafana.sh
+        mode: 0755
+    secrets:
+      - source: vault-ca-cert
+        target: /tmp/vault/ca.crt
+        mode: 0444
+    networks:
+      - ocariot
+    depends_on:
+      - prometheus
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
+  # Metrics database
+  prometheus:
+    image: prom/prometheus:v2.16.0
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
+      placement:
+        constraints:
+          - node.role == manager
+    command:
+      - '--config.file=/etc/prometheus/config.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+    volumes:
+      - prometheus-data:/prometheus
+    configs:
+      - source: ocariot-prometheus-config
+        target: /etc/prometheus/config.yml
+    networks:
+      - ocariot
+    depends_on:
+      - node-exporter
+      - cadvisor
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
 
   # Containers metrics collector
   cadvisor:
     image: google/cadvisor
-    networks:
-      - ocariot
+    deploy:
+      mode: global
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
     command: -docker_only
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -67,74 +104,42 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
-    deploy:
-      mode: global
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
+    networks:
+      - ocariot
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
 
   # Host metrics collector
   node-exporter:
-    image: prom/node-exporter:v1.0.0-rc.0
+    image: prom/node-exporter:latest
     user: root
-    networks:
-      - ocariot
+    deploy:
+      mode: global
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
     environment:
       - NODE_ID={{.Node.ID}}
+    entrypoint: /etc/node-exporter/docker-entrypoint.sh
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.textfile.directory=/etc/node-exporter/'
     volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
+      - /:/host:ro,rslave
       - /etc/hostname:/etc/nodename:ro
     configs:
       - source: ocariot-init-node-exporter-config
         target: /etc/node-exporter/docker-entrypoint.sh
         mode: 0755
-    entrypoint: /etc/node-exporter/docker-entrypoint.sh
-    command:
-      - '--path.sysfs=/host/sys'
-      - '--path.procfs=/host/proc'
-      - '--collector.textfile.directory=/etc/node-exporter/'
-      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
-      - '--no-collector.ipvs'
-    deploy:
-      mode: global
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
-  # Metrics database
-  prometheus:
-    image: stefanprodan/swarmprom-prometheus:v2.5.0
     networks:
       - ocariot
-    entrypoint: /bin/prometheus
-    command:
-      - '--config.file=/etc/prometheus/config.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention=${PROMETHEUS_RETENTION:-24h}'
-    volumes:
-      - prometheus:/prometheus
-    configs:
-      - source: ocariot-prometheus-config
-        target: /etc/prometheus/config.yml
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          memory: 2048M
-        reservations:
-          memory: 128M
-    ports:
-      - 9090:9090
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
 
 secrets:
   vault-ca-cert:
@@ -153,8 +158,10 @@ configs:
     file: config/monitor/node-exporter/docker-entrypoint.sh
 
 volumes:
-  prometheus: {}
-  grafana: {}
+  grafana-data:
+    name: ocariot-monitor-grafana-data
+  prometheus-data:
+    name: ocariot-monitor-prometheus-data
 
 networks:
   ocariot:
