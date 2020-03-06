@@ -14,10 +14,13 @@ then
   exit
 fi
 
-if [ "$(docker stack ls | grep ${MONITOR_STACK_NAME})" = "" ]; then
-    set_variables_environment
+PARENT_PROCESS=$(ps -o args -p $PPID | tail -n +2 | grep -wo $(which ocariot))
 
-    docker stack deploy -c ${INSTALL_PATH}/docker-monitor-stack.yml ${MONITOR_STACK_NAME}
-else
-    echo "Container health monitoring is already active."
+if [ "$(docker stack ls | grep ${MONITOR_STACK_NAME})" ] && [ "${PARENT_PROCESS}" ]; then
+  echo "Ocariot ocariot-monitor was already active."
+  exit
 fi
+
+set_variables_environment "${ENV_MONITOR}"
+
+docker stack deploy -c ${INSTALL_PATH}/docker-monitor-stack.yml ${MONITOR_STACK_NAME} --resolve-image changed

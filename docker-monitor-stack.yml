@@ -17,15 +17,15 @@ services:
         constraints:
           - node.role == manager
     environment:
-      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USERNAME:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
       - VAULT_BASE_URL=${VAULT_BASE_URL}
       - VAULT_PORT=${VAULT_PORT}
       - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
       - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
-      - GF_SMTP_USER=${GF_SMTP_USER}
-      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+      - GF_SMTP_USER=${GF_SMTP_USER:-grafana@test.com}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD:-secret}
     entrypoint: initializing_grafana.sh
     volumes:
       - grafana-data:/var/lib/grafana
@@ -89,7 +89,7 @@ services:
 
   # Containers metrics collector
   cadvisor:
-    image: google/cadvisor
+    image: google/cadvisor:v0.33.0
     deploy:
       mode: global
       restart_policy:
@@ -113,7 +113,7 @@ services:
 
   # Host metrics collector
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v0.18.1
     user: root
     deploy:
       mode: global
