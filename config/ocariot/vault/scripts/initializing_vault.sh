@@ -259,7 +259,7 @@ configure_psmdbs()
 add_certificate()
 {
     mkdir -p /usr/share/ca-certificates/extra
-    cat /etc/rabbitmq/.certs/ca.cert >> /usr/share/ca-certificates/extra/ca_rabbitmq.crt
+    vault read -field="certificate" /pki/cert/ca >> /usr/share/ca-certificates/extra/ca_rabbitmq.crt
     echo "extra/ca_rabbitmq.crt" >> /etc/ca-certificates.conf
     update-ca-certificates
 }
@@ -424,13 +424,16 @@ main()
     # Function to check if HA Mode was initialized
     check_ha_mode
 
+    # Authenticating user with root access token
+    root_user_authentication
+
+    # Function used to enable and configure certificate issuance
+    generate_certificates
+
     # Function used to add the RabbitMQ CA certificate to the system, with
     # this CA certificate RabbitMQ becomes trusted.
     # Obs: This is necessary to enable RabbitMQ plugin
     add_certificate
-
-    # Authenticating user with root access token
-    root_user_authentication
 
     # Enabling secrets enrollment in Vault
     vault secrets enable -version=1 -path=secret-v1/ kv &> /dev/null
@@ -441,9 +444,6 @@ main()
     TOKENS_TO_REVOKE=$(vault list /auth/token/accessors)
 
     create_keystore_pass > /dev/null
-
-    # Function used to enable and configure certificate issuance
-    generate_certificates
 
     # Function to create JWT keys that will be requested
     # by the Account service and will have the public key

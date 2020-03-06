@@ -54,9 +54,6 @@ services:
       - source: vault-server-cert
         target: /etc/vault/.certs/server.cert
         mode: 0660
-      - source: rabbitmq-ca-cert
-        target: /etc/rabbitmq/.certs/ca.cert
-        mode: 0660
     depends_on:
       - consul
     networks:
@@ -858,11 +855,11 @@ services:
 
 secrets:
   vault-server-key:
-    file: ${VAULT_KEY_PATH}
+    file: config/ocariot/vault/.certs/server.key
   vault-server-cert:
-    file: ${VAULT_CERT_PATH}
+    file: config/ocariot/vault/.certs/server.crt
   vault-ca-cert:
-    file: ${VAULT_CA_CERT_PATH}
+    file: config/ocariot/vault/.certs/ca.crt
   consul-server-key:
     file: config/ocariot/consul/.certs/server.key
   consul-server-cert:
