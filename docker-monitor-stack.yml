@@ -1,206 +1,171 @@
-version: "3.3"
-
-networks:
-  net:
-    driver: overlay
-    attachable: true
-
-volumes:
-    prometheus: {}
-    grafana: {}
-    alertmanager: {}
-
-configs:
-  caddy_config:
-    file: config/monitor/caddy/Caddyfile
-  dockerd_config:
-    file: config/monitor/dockerd-exporter/Caddyfile
-  node_rules:
-    file: config/monitor/prometheus/rules/swarm_node.rules.yml
-  task_rules:
-    file: config/monitor/prometheus/rules/swarm_task.rules.yml
+version: "3.7"
 
 services:
-  dockerd-exporter:
-    image: stefanprodan/caddy
-    networks:
-      - net
+  # Visualize metrics
+  grafana:
+    hostname: grafana
+    image: grafana/grafana:6.6.2
+    user: root
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
+      placement:
+        constraints:
+          - node.role == manager
     environment:
-      - DOCKER_GWBRIDGE_IP=172.18.0.1
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USERNAME:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - VAULT_BASE_URL=${VAULT_BASE_URL}
+      - VAULT_PORT=${VAULT_PORT}
+      - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
+      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
+      - GF_SMTP_USER=${GF_SMTP_USER:-grafana@test.com}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD:-secret}
+    entrypoint: initializing_grafana.sh
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - "./config/ocariot/vault/.tokens/access-token-grafana:/tmp/access-token-grafana"
+    ports:
+      - 3200:3000
     configs:
-      - source: dockerd_config
-        target: /etc/caddy/Caddyfile
+      - source: ocariot-grafana-config
+        target: /etc/grafana/grafana.ini
+        mode: 0444
+      - source: ocariot-prom-data-src-grafana-config
+        target: /etc/grafana/provisioning/datasources/prom_data_src.yaml
+        mode: 0444
+      - source: ocariot-init-grafana-config
+        target: /usr/bin/initializing_grafana.sh
+        mode: 0755
+    secrets:
+      - source: vault-ca-cert
+        target: /tmp/vault/ca.crt
+        mode: 0444
+    networks:
+      - ocariot
+    depends_on:
+      - prometheus
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
+  # Metrics database
+  prometheus:
+    image: prom/prometheus:v2.16.0
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
+      placement:
+        constraints:
+          - node.role == manager
+    command:
+      - '--config.file=/etc/prometheus/config.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+    volumes:
+      - prometheus-data:/prometheus
+    configs:
+      - source: ocariot-prometheus-config
+        target: /etc/prometheus/config.yml
+    networks:
+      - ocariot
+    depends_on:
+      - node-exporter
+      - cadvisor
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
+  # Containers metrics collector
+  cadvisor:
+    image: google/cadvisor:v0.33.0
     deploy:
       mode: global
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
-  cadvisor:
-    image: google/cadvisor
-    networks:
-      - net
-    command: -logtostderr -docker_only
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
+    command: -docker_only
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /:/rootfs:ro
-      - /var/run:/var/run
+      - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - ocariot
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
+  # Host metrics collector
+  node-exporter:
+    image: prom/node-exporter:v0.18.1
+    user: root
     deploy:
       mode: global
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
-  grafana:
-    image: stefanprodan/swarmprom-grafana:5.3.4
-    networks:
-      - net
-    environment:
-      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      #- GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-localhost}
-      #- GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
-      #- GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS:-grafana@test.com}
-      #- GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME:-Grafana}
-      #- GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
-      #- GF_SMTP_USER=${GF_SMTP_USER}
-      #- GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
-    volumes:
-      - grafana:/var/lib/grafana
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
-  alertmanager:
-    image: stefanprodan/swarmprom-alertmanager:v0.14.0
-    networks:
-      - net
-    environment:
-      - SLACK_URL=${SLACK_URL:-https://hooks.slack.com/services/TOKEN}
-      - SLACK_CHANNEL=${SLACK_CHANNEL:-general}
-      - SLACK_USER=${SLACK_USER:-alertmanager}
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-    volumes:
-      - alertmanager:/alertmanager
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
-  unsee:
-    image: cloudflare/unsee:v0.8.0
-    networks:
-      - net
-    environment:
-      - "ALERTMANAGER_URIS=default:http://alertmanager:9093"
-    deploy:
-      mode: replicated
-      replicas: 1
-
-  node-exporter:
-    image: stefanprodan/swarmprom-node-exporter:v0.16.0
-    networks:
-      - net
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
     environment:
       - NODE_ID={{.Node.ID}}
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-      - /etc/hostname:/etc/nodename
+    entrypoint: /etc/node-exporter/docker-entrypoint.sh
     command:
-      - '--path.sysfs=/host/sys'
-      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/host'
       - '--collector.textfile.directory=/etc/node-exporter/'
-      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
-      - '--no-collector.ipvs'
-    deploy:
-      mode: global
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
-  prometheus:
-    image: stefanprodan/swarmprom-prometheus:v2.5.0
-    networks:
-      - net
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention=${PROMETHEUS_RETENTION:-24h}'
     volumes:
-      - prometheus:/prometheus
+      - /:/host:ro,rslave
+      - /etc/hostname:/etc/nodename:ro
     configs:
-      - source: node_rules
-        target: /etc/prometheus/swarm_node.rules.yml
-      - source: task_rules
-        target: /etc/prometheus/swarm_task.rules.yml
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          memory: 2048M
-        reservations:
-          memory: 128M
-
-  caddy:
-    image: stefanprodan/caddy
-    ports:
-      - "3000:3000"
-      - "9090:9090"
-      - "9093:9093"
-      - "9094:9094"
+      - source: ocariot-init-node-exporter-config
+        target: /etc/node-exporter/docker-entrypoint.sh
+        mode: 0755
     networks:
-      - net
-    environment:
-      - ADMIN_USER=${ADMIN_USER:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-    configs:
-      - source: caddy_config
-        target: /etc/caddy/Caddyfile
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 5s
-      timeout: 1s
-      retries: 5
+      - ocariot
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
+secrets:
+  vault-ca-cert:
+    file: ${VAULT_CA_CERT_PATH}
+
+configs:
+  ocariot-prometheus-config:
+    file: config/monitor/prometheus/config.yml
+  ocariot-grafana-config:
+    file: config/monitor/grafana/grafana.ini
+  ocariot-prom-data-src-grafana-config:
+    file: config/monitor/grafana/prom_data_src.yaml
+  ocariot-init-grafana-config:
+    file: config/monitor/grafana/scripts/initializing_grafana.sh
+  ocariot-init-node-exporter-config:
+    file: config/monitor/node-exporter/docker-entrypoint.sh
+
+volumes:
+  grafana-data:
+    name: ocariot-monitor-grafana-data
+  prometheus-data:
+    name: ocariot-monitor-prometheus-data
+
+networks:
+  ocariot:
+    external: true
+    name: ocariot
+    driver_opts:
+      encrypted: "true"

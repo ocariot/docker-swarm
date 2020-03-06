@@ -17,7 +17,6 @@ if ([ "$1" != "--services" ] && [ "$1" != "" ]) \
 
     stack_help
 fi
-set_variables_environment
 
 if [ "${SERVICES}" = "" ];
 then

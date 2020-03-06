@@ -134,7 +134,7 @@ VOLUMES_BKP=""
 RUNNING_SERVICES=""
 
 # Verifying if backup folder exist
-if [  "$1" = "restore" ] && [ "$(ls ${BKP_DIRECTORY} 2> /dev/null | grep -P 'ocariot.*data' | wc -l)" = 0 ];
+if [  "$1" = "restore" ] && [ "$(ls ${BKP_DIRECTORY} 2> /dev/null | grep -P 'ocariot.*data' | grep -v 'ocariot-monitor' |  wc -l)" = 0 ];
 then
     echo "No container backup was found"
     exit
@@ -144,10 +144,12 @@ if [ "${CONTAINERS_BKP}" = "" ]; then
 	if [ "$1" = "backup" ];
     then
         CONTAINERS_BKP=$(docker volume ls --format "{{.Name}}" --filter name=ocariot \
+            | grep -v 'ocariot-monitor' \
             | sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
     else
         CONTAINERS_BKP=$(ls ${BKP_DIRECTORY} \
             | grep -P 'ocariot.*data' \
+            | grep -v 'ocariot-monitor' \
             | sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
     fi
 fi
@@ -159,7 +161,8 @@ do
     SERVICE_NAME=$(docker service ls \
         --filter name=${OCARIOT_STACK_NAME} \
         --format "{{.Name}}" \
-        | grep -w ${OCARIOT_STACK_NAME}_.*${CONTAINER_NAME})
+        | grep -w ${OCARIOT_STACK_NAME}_.*${CONTAINER_NAME} \
+        | grep -v 'ocariot-monitor')
     RUNNING_SERVICES="${RUNNING_SERVICES} ${SERVICE_NAME}"
 
     if [ "$1" = "backup" ];
@@ -168,11 +171,13 @@ do
         VOLUME_NAME=$(docker volume ls \
             --filter name=ocariot \
             --format "{{.Name}}" \
-            | grep -w ${CONTAINER_NAME})
+            | grep -w ${CONTAINER_NAME} \
+            | grep -v 'ocariot-monitor')
     else
         MESSAGE="Not found ${CONTAINER_NAME} volume!"
         VOLUME_NAME=$(ls ${BKP_DIRECTORY} \
-            | grep -w ${CONTAINER_NAME})
+            | grep -w ${CONTAINER_NAME} \
+            | grep -v 'ocariot-monitor')
     fi
 
     if [ "${VOLUME_NAME}" = "" ]
@@ -193,8 +198,6 @@ if [ ! $(find /tmp -maxdepth 1 -name cache-ocariot) ]
 then
     mkdir /tmp/cache-ocariot
 fi
-
-set_variables_environment
 
 INCREMENT=1
 for VOLUME in ${VOLUMES_BKP};

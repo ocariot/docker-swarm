@@ -3,6 +3,18 @@
 INSTALL_PATH="/opt/ocariot-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
 
+edit_config()
+{
+  # Verifying the existence of .env|.env.example file
+  if [ ! $(find ${INSTALL_PATH} -name $1) ]
+  then
+    cp ${INSTALL_PATH}/$1.example ${INSTALL_PATH}/$1
+  fi
+
+  editor ${INSTALL_PATH}/$1
+  set -a && . ${INSTALL_PATH}/.$1 && set +a
+}
+
 get_last_tag()
 {
    JSON=$(curl -s https://api.github.com/repos/ocariot/docker-swarm/releases/latest)
@@ -19,14 +31,14 @@ stack_options()
         COMMAND="/scripts/stack/stop.sh $(echo $@ | sed "s/$1//g")"
         ;;
       backup)
-            PARAMETERS=$@
+        PARAMETERS=$@
 
-            if [ "${EXPRESSION_BKP}" ];then
-                PARAMETERS="$(echo -e "$@" \
-                    | sed 's/\-\-/\n\-\-/g' \
-                    | sed '/expression/d' \
-                    | sed -z 's/\n//g') --expression \"${EXPRESSION_BKP}\""
-            fi
+        if [ "${EXPRESSION_BKP}" ];then
+          PARAMETERS="$(echo -e "$@" \
+            | sed 's/\-\-/\n\-\-/g' \
+            | sed '/expression/d' \
+            | sed -z 's/\n//g') --expression \"${EXPRESSION_BKP}\""
+        fi
 
         COMMAND="/scripts/stack/volumes.sh ${PARAMETERS}"
         ;;
@@ -37,14 +49,7 @@ stack_options()
         COMMAND="/scripts/stack/update-images.sh $(echo $@ | sed "s/$1//g")"
         ;;
       edit-config)
-         # Verifying the existence of .env file
-        if [ ! $(find ${INSTALL_PATH} -name .env) ]
-        then
-           cp ${INSTALL_PATH}/.env.example ${INSTALL_PATH}/.env
-        fi
-
-        editor ${INSTALL_PATH}/.env
-        set_variables_environment
+        edit_config ${ENV_OCARIOT}
         exit
         ;;
 			*)
@@ -62,6 +67,25 @@ monitor_options()
       stop)
         COMMAND="/scripts/monitor/stop.sh $(echo $@ | sed "s/$1//g")"
         ;;
+      backup)
+        PARAMETERS=$@
+
+        if [ "${EXPRESSION_BKP}" ];then
+          PARAMETERS="$(echo -e "$@" \
+            | sed 's/\-\-/\n\-\-/g' \
+            | sed '/expression/d' \
+            | sed -z 's/\n//g') --expression \"${EXPRESSION_BKP}\""
+        fi
+
+        COMMAND="/scripts/monitor/volumes.sh ${PARAMETERS}"
+        ;;
+      restore)
+        COMMAND="/scripts/monitor/volumes.sh $@"
+        ;;
+      edit-config)
+        edit_config ${ENV_MONITOR}
+        exit
+        ;;
       *)
         monitor_help
         ;;
@@ -75,14 +99,9 @@ fi
 
 case $1 in
   uninstall)
-		COMMAND="/scripts/stack/uninstall.sh $(echo $@ | sed "s/$1//g")"
+		COMMAND="/scripts/uninstall.sh $(echo $@ | sed "s/$1//g")"
 		;;
   update)
-    if [ "$EUID" -ne 0 ]; then
-      echo "Please run as root"
-      exit
-    fi
-
     LAST_TAG=$(get_last_tag)
     sudo git -C ${INSTALL_PATH} reset --hard HEAD &> /dev/null
     sudo git -C ${INSTALL_PATH} fetch &> /dev/null
@@ -102,7 +121,11 @@ case $1 in
   monitor)
     monitor_options $(echo $@ | sed "s/$1 //g")
 		;;
-	*)
+  version)
+    echo "Version: $(git -C ${INSTALL_PATH} describe --tags --abbrev=0)"
+    exit
+    ;;
+  *)
 		ocariot_help
 		;;
 esac
