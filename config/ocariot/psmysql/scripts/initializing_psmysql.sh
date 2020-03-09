@@ -158,6 +158,13 @@ configure_environment
 ## Function to get server certificates from Vault
 get_certificates
 #
+
+set -a
+  # This variable is only useful during the first boot. Once
+  # authentication settings are established, their value will no longer be important
+  MYSQL_ALLOW_EMPTY_PASSWORD=true
+set +a
+
 ## Function to create admin user and to revoke Vault token after
 ## finalized configurations
 add_user &

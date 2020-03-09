@@ -20,30 +20,16 @@ services:
       - GF_SECURITY_ADMIN_USER=${ADMIN_USERNAME:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
       - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
       - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
       - GF_SMTP_USER=${GF_SMTP_USER:-grafana@test.com}
       - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD:-secret}
-    entrypoint: initializing_grafana.sh
     volumes:
       - grafana-data:/var/lib/grafana
-      - "./config/ocariot/vault/.tokens/access-token-grafana:/tmp/access-token-grafana"
     configs:
-      - source: ocariot-grafana-config
-        target: /etc/grafana/grafana.ini
-        mode: 0444
       - source: ocariot-prom-data-src-grafana-config
         target: /etc/grafana/provisioning/datasources/prom_data_src.yaml
-        mode: 0444
-      - source: ocariot-init-grafana-config
-        target: /usr/bin/initializing_grafana.sh
-        mode: 0755
-    secrets:
-      - source: vault-ca-cert
-        target: /tmp/vault/ca.crt
-        mode: 0444
+        mode: 0400
     networks:
       - ocariot
     depends_on:
@@ -75,6 +61,7 @@ services:
     configs:
       - source: ocariot-prometheus-config
         target: /etc/prometheus/config.yml
+        mode: 0444
     networks:
       - ocariot
     depends_on:
@@ -131,7 +118,7 @@ services:
     configs:
       - source: ocariot-init-node-exporter-config
         target: /etc/node-exporter/docker-entrypoint.sh
-        mode: 0755
+        mode: 0100
     networks:
       - ocariot
     logging:
@@ -139,19 +126,11 @@ services:
       options:
         max-size: 100m
 
-secrets:
-  vault-ca-cert:
-    file: ${VAULT_CA_CERT_PATH}
-
 configs:
   ocariot-prometheus-config:
     file: config/monitor/prometheus/config.yml
-  ocariot-grafana-config:
-    file: config/monitor/grafana/grafana.ini
   ocariot-prom-data-src-grafana-config:
     file: config/monitor/grafana/prom_data_src.yaml
-  ocariot-init-grafana-config:
-    file: config/monitor/grafana/scripts/initializing_grafana.sh
   ocariot-init-node-exporter-config:
     file: config/monitor/node-exporter/docker-entrypoint.sh
 
