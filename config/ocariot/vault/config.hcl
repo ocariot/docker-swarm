@@ -17,9 +17,6 @@ listener "tcp" {
   tls_key_file  = "/etc/vault/.certs/server.key"
 }
 
-api_addr = "https://vault:8200"
-cluster_addr = "https://vault:8201"
-
 max_lease_ttl = "87600h"
 
 disable_mlock = true

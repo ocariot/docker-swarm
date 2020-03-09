@@ -44,11 +44,11 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.3.3/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.0/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.3.3/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.0/install.sh | sudo bash
 ```
 
 
@@ -78,9 +78,10 @@ Variables to define the URL of services to be exposed, such as Vault and RabbitM
 
 | Variable | Description | Example |
 | -------- | ----------- | ------- |
-| `VAULT_BASE_URL` |  Vault service URL. Used by internal services in requests to Vault.  It is not necessary to define a port, it is defined in another variable. | `https://api.ocariot.com.br` |
-| `RABBITMQ_MGT_BASE_URL` | RabbitMQ Management URL. Used by internal services in requests to RabbitMQ.  It is not necessary to define a port, it is defined in another variable. | `https://api.ocariot.com.br` |
-
+| `API_GATEWAY_HOSTNAME` |  API Gateway hostname. | `api.ocariot.com.br` |
+| `VAULT_HOSTNAME` |  Vault HashiCorp hostname. | `vault.ocariot.com.br` |
+| `RABBIT_MGT_HOSTNAME` |  RabbitMQ Management hostname. | `rabbit.ocariot.com.br` |
+| `MONITOR_HOSTNAME` | Monitor/Grafana hostname. | `monitor.ocariot.com.br` |
 
 #### 2.1.2 External Service Ports
 Variables to define the ports of services to be exposed, such as API Gateway, Vault, and RabbitMQ Management.
@@ -89,8 +90,6 @@ Variables to define the ports of services to be exposed, such as API Gateway, Va
 | -------- | ----------- | ------- |
 | `AG_PORT_HTTP` |  Port used by the API Gateway service to listen for HTTP request. Automatically redirects to HTTPS port. | `80` |
 | `AG_PORT_HTTPS` | Port used by the API Gateway service to listen for HTTPS request. | `443` |
-| `VAULT_PORT` | Port used by the Vault service to listen for HTTPS request. | `8200` |
-| `RABBITMQ_MGT_PORT` | Port used by RabbitMQ Management to service the HTTPS request. | `15671` |
 
 
 #### 2.1.3 Certificates/keys
@@ -100,12 +99,7 @@ Variables to define the ports of services to be exposed, such as API Gateway, Va
 | -------- | ----------- | ------- |
 | `AG_KEY_PATH` | API Gateway private key. | `mycerts/privkey.pem` |
 | `AG_CERT_PATH` | API Gateway domain certificate/public key. | `mycerts/fullchain.pem` |
-| `VAULT_KEY_PATH` | Vault private key. | `mycerts/privkey.pem` |
-| `VAULT_CERT_PATH` | Vault domain certificate/public key. | `mycerts/cert.pem` |
-| `VAULT_CA_CERT_PATH` | Vault CA certificate. | `mycerts/chain.pem` |
-| `RABBITMQ_MGMT_KEY_PATH` | RabbitMQ Management private key. | `mycerts/privkey.pem` |
-| `RABBITMQ_MGT_CERT_PATH` | RabbitMQ Management domain certificate/public key. | `mycerts/cert.pem` |
-| `RABBITMQ_MGT_CA_CERT_PATH` | RabbitMQ Management CA certificate. | `mycerts/chain.pem` |
+
 
 
 #### 2.1.4 Data Sync Setup
@@ -210,29 +204,7 @@ On future start-ups, the settings file will not be opened automatically. Consequ
 $ sudo ocariot monitor edit-config
 ```
 
-#### 3.1.1 External Service URL
-Variables to define the URL of services to be exposed, such as Vault and RabbitMQ Management. This is useful for viewing data saved in Vault and managing the Message Bus.
-
-| Variable | Description | Example |
-| -------- | ----------- | ------- |
-| `VAULT_BASE_URL` |  Vault service URL. Used by internal services in requests to Vault.  It is not necessary to define a port, it is defined in another variable. | `https://api.ocariot.com.br` |
-
-#### 3.1.2 External Service Ports
-Variables to define the ports of services to be exposed, such as API Gateway, Vault, and RabbitMQ Management.
-
-| Variable | Description | Example |
-| -------- | ----------- | ------- |
-| `VAULT_PORT` | Port used by the Vault service to listen for HTTPS request. | `8200` |
-
-
-#### 3.1.3 Certificates/keys
-Variables to define the ports of services to be exposed, such as API Gateway, Vault, and RabbitMQ Management.
-
-| Variable | Description | Example |
-| -------- | ----------- | ------- |
-| `VAULT_CA_CERT_PATH` | Vault CA certificate. | `mycerts/chain.pem` |
-
-#### 3.1.4 Authorization/Authentication Setup
+#### 3.1.1 Authorization/Authentication Setup
 
 Variables to define the administrator user's credentials the first time the Grafana is instantiated.
 
@@ -241,7 +213,7 @@ Variables to define the administrator user's credentials the first time the Graf
 | `ADMIN_USERNAME` | Username of the default admin user created automatically at the first time the Grafana is instantiated. | `admin` |
 | `ADMIN_PASSWORD` | Password of the default admin user created automatically at the first time the Grafana is instantiated. | `admin` |
 
-#### 3.1.5 SMTP Setup
+#### 3.1.2 SMTP Setup
 
 | Variable | Description | Example |
 | -------- | ----------- | ------- |

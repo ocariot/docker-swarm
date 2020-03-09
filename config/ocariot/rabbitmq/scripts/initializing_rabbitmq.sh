@@ -13,7 +13,7 @@ add_user()
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --silent \
             --output /tmp/admin_credential.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/rabbitmq/credential)
+            ${VAULT_BASE_URL}/v1/secret/data/rabbitmq/credential)
     done
 
     CREDENTIAL=$(cat /tmp/admin_credential.json | jq '.data.data.user, .data.data.passwd')
@@ -57,7 +57,7 @@ get_certificates()
 {
     RET_CERT_RABBITMQ=1
     while [[ $RET_CERT_RABBITMQ -ne 200 ]]; do
-        echo "=> Waiting for certificates..."
+        echo $2
         # The requests are realized in each 2 seconds
         sleep 2
         # Request to get server certificates from Vault
@@ -67,18 +67,20 @@ get_certificates()
             --data-binary "{\"common_name\": \"rabbitmq\"}" \
             --silent \
             --output /tmp/certificates.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/pki/issue/rabbitmq)
+            ${VAULT_BASE_URL}/v1/pki/issue/rabbitmq)
 
     done
 
+    mkdir -p $1
+
     # Processing and placing CA certificate for /etc/.certs/ca.crt
-    echo -e $(jq '.data.issuing_ca' /tmp/certificates.json | sed 's/"//g') > /etc/.certs/ca.crt
+    echo -e $(jq '.data.issuing_ca' /tmp/certificates.json | sed 's/"//g') > $1/ca.crt
 
     # Processing and placing private key server for /etc/.certs/server.cert
-    echo -e $(jq '.data.certificate' /tmp/certificates.json | sed 's/"//g') > /etc/.certs/server.cert
+    echo -e $(jq '.data.certificate' /tmp/certificates.json | sed 's/"//g') > $1/server.cert
 
     # Processing and placing public key server for /etc/.certs/server.key
-    echo -e $(jq '.data.private_key' /tmp/certificates.json | sed 's/"//g') > /etc/.certs/server.key
+    echo -e $(jq '.data.private_key' /tmp/certificates.json | sed 's/"//g') > $1/server.key
 
     # Removing temporarily file utilized in request
     rm /tmp/certificates.json
@@ -130,7 +132,7 @@ revoke_token()
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --request POST \
             --silent \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/auth/token/revoke-self -w "%{http_code}\n")
+            ${VAULT_BASE_URL}/v1/auth/token/revoke-self -w "%{http_code}\n")
     done
 
     # Removing the environment variable access token
@@ -140,8 +142,11 @@ revoke_token()
 # General function to monitor the receiving of access token from Vault
 configure_environment
 
-# Function to get server certificates from Vault
-get_certificates
+# Function to get server certificates of Bus from Vault
+get_certificates "/etc/.certs/bus" "=> Waiting for Bus certificates..."
+
+# Function to get server certificates of Manager from Vault
+get_certificates "/etc/.certs/management" "=> Waiting for Manager certificates..."
 
 # Function to create admin user and to revoke Vault token after
 # finalized configurations

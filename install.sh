@@ -4,7 +4,7 @@ INSTALL_PATH="/opt/ocariot-swarm"
 
 version()
 {
-  echo "1.3.3"
+  echo "1.4.0"
 }
 
 isInstalled()
@@ -40,7 +40,6 @@ ls ${INSTALL_PATH} &> /dev/null
 if [ "$?" != "0" ];then
     git clone https://github.com/ocariot/docker-swarm ${INSTALL_PATH} > /dev/null
     git -C ${INSTALL_PATH} checkout "tags/$(version)" > /dev/null
-#    cp $(realpath $0 | grep .*swarm-ocariot -o) ${INSTALL_PATH} -R
 fi
 
 WATCHDOG_COMMAND="ocariot_watchdog.sh"
