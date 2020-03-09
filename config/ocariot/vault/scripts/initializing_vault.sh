@@ -88,6 +88,8 @@ check_consul()
 # Function to check if RabbitMQ was initialized
 check_rabbitmq()
 {
+    RABBITMQ_PORT=$(echo ${RABBITMQ_MGT_BASE_URL} | grep -oE "[^:]+$")
+    RABBITMQ_URL=$(echo ${RABBITMQ_MGT_BASE_URL} | sed "s/\(:\|\/\)/ /g" | awk '{print $2}')
     # Waiting for RabbitMQ to boot
     local RET=1
     while [[ $RET -ne 0 ]]; do
@@ -296,7 +298,7 @@ configure_rabbitmq_plugin()
     while [[ $RET -ne 0 ]]; do
         echo "=> Waiting to enable plugin for rabbitmq service"
         vault write rabbitmq/config/connection \
-            connection_uri="${RABBITMQ_MGT_BASE_URL}:${RABBITMQ_MGT_PORT}" \
+            connection_uri="${RABBITMQ_MGT_BASE_URL}" \
             username=${USER} \
             password=${PASSWD} 2> /dev/null
         RET=$?

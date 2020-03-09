@@ -9,13 +9,14 @@ read_json()
 # Function to get server certificates from Vault
 get_certificates()
 {
+    echo ${VAULT_ACCESS_TOKEN}
     RET_CERT=1
     while [[ $RET_CERT -ne 200 ]]; do
         echo "=> Waiting for certificates..."
         # The requests are realized every 2 seconds
         sleep 2
         # Request to get server certificates from Vault
-        RET_CERT=$(curl \
+        RET_CERT=$(curl -k \
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --request POST \
             --data-binary "{\"common_name\": \"${HOSTNAME}\"}" \

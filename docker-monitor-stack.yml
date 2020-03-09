@@ -30,8 +30,6 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - "./config/ocariot/vault/.tokens/access-token-grafana:/tmp/access-token-grafana"
-    ports:
-      - 3200:3000
     configs:
       - source: ocariot-grafana-config
         target: /etc/grafana/grafana.ini

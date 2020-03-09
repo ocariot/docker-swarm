@@ -10,10 +10,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - RABBITMQ_MGT_BASE_URL=${RABBITMQ_MGT_BASE_URL}
-      - RABBITMQ_MGT_PORT=${RABBITMQ_MGT_PORT}
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - RABBITMQ_MGT_BASE_URL=https://rabbitmq:15671
       - VAULT_ADDR=https://localhost:8200
       - VAULT_SKIP_VERIFY=true
     volumes:
@@ -33,8 +30,6 @@ services:
       - source: ocariot-remove-token-vault-config
         target: /etc/vault/scripts/remove_tokens.sh
         mode: 0750
-    ports:
-      - ${VAULT_PORT}:8200
     secrets:
       - source: consul-ca-cert
         target: /etc/consul/.certs/ca.crt
@@ -111,8 +106,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
       - "psmdb-account-data:/data/db"
       - "./config/ocariot/vault/.tokens/access-token-psmdb-account:/tmp/access-token-psmdb-account"
@@ -147,8 +141,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
       - "psmdb-iot-tracking-data:/data/db"
       - "./config/ocariot/vault/.tokens/access-token-psmdb-iot-tracking:/tmp/access-token-psmdb-iot-tracking"
@@ -183,8 +176,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
       - "psmdb-ds-agent-data:/data/db"
       - "./config/ocariot/vault/.tokens/access-token-psmdb-ds-agent:/tmp/access-token-psmdb-ds-agent"
@@ -219,8 +211,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
       - "psmdb-quest-data:/data/db"
       - "./config/ocariot/vault/.tokens/access-token-psmdb-quest:/tmp/access-token-psmdb-quest"
@@ -255,8 +246,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
       - "psmdb-gamification-data:/data/db"
       - "./config/ocariot/vault/.tokens/access-token-psmdb-gamification:/tmp/access-token-psmdb-gamification"
@@ -291,8 +281,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
       - "psmdb-food-data:/data/db"
       - "./config/ocariot/vault/.tokens/access-token-psmdb-food:/tmp/access-token-psmdb-food"
@@ -327,8 +316,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
       - "psmdb-notification-data:/data/db"
       - "./config/ocariot/vault/.tokens/access-token-psmdb-notification:/tmp/access-token-psmdb-notification"
@@ -363,8 +351,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - MYSQL_ROOT_PASSWORD=secret
     volumes:
       - "./config/ocariot/vault/.tokens/access-token-psmysql-missions:/tmp/access-token-psmysql-missions"
@@ -440,8 +427,6 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
       - NODE_ENV=production
       - PORT_HTTP=8080
       - PORT_HTTPS=8081
@@ -457,6 +442,13 @@ services:
       - MISSIONS_SERVICE=https://missions:8001
       - FOOD_SERVICE=https://food:9001
       - NOTIFICATION_SERVICE=https://notification:10001
+      - VAULT_SERVICE=https://vault:8200
+      - RABBIT_MGT_SERVICE=https://rabbitmq:15671
+      - MONITOR_SERVICE=https://grafana:3000
+      - API_GATEWAY_HOSTNAME=${API_GATEWAY_HOSTNAME}
+      - VAULT_HOSTNAME=${VAULT_HOSTNAME}
+      - RABBIT_MGT_HOSTNAME=${RABBIT_MGT_HOSTNAME}
+      - MONITOR_HOSTNAME=${MONITOR_HOSTNAME}
       - EMULATE_REDIS=false
       - PORT_REDIS=6379
       - HOST_REDIS=redis-api-gateway
@@ -500,8 +492,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PORT_HTTP=3000
       - PORT_HTTPS=3001
@@ -540,8 +531,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PORT_HTTP=4000
       - PORT_HTTPS=4001
@@ -577,8 +567,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PORT_HTTP=5000
       - PORT_HTTPS=5001
@@ -619,8 +608,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PROTOCOL=https
       - PORT=6001
@@ -656,8 +644,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PROTOCOL=https
       - PORT=7001
@@ -693,8 +680,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PROTOCOL=https
       - PORT=8001
@@ -731,8 +717,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PORT_HTTPS=10001
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/keys/firebase_keyfile.json
@@ -770,8 +755,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=development
       - PORT=8000
       - SSL_PORT=8001
@@ -812,9 +796,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - RABBITMQ_MGT_BASE_URL=${RABBITMQ_MGT_BASE_URL}
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     entrypoint: initializing_rabbitmq.sh
     volumes:
       - "./config/ocariot/vault/.tokens/access-token-rabbitmq:/tmp/access-token-rabbitmq"
@@ -829,21 +811,10 @@ services:
       - source: ocariot-rabbitmq-plugins
         target: /etc/rabbitmq/enabled_plugins
         mode: 0750
-    ports:
-      - ${RABBITMQ_MGT_PORT:-15671}:15671
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
         mode: 0640
-      - source: rabbitmq-ca-cert
-        target: /etc/.certs/mgmt_ca.crt
-        mode: 0660
-      - source: rabbitmq-server-key
-        target: /etc/.certs/mgmt_server.key
-        mode: 0660
-      - source: rabbitmq-server-cert
-        target: /etc/.certs/mgmt_server.cert
-        mode: 0660
     depends_on:
       - vault
     networks:
@@ -870,12 +841,6 @@ secrets:
     file: config/ocariot/vault/.certs/consul_client_vault.key
   consul-client-vault-cert:
     file: config/ocariot/vault/.certs/consul_client_vault.crt
-  rabbitmq-server-key:
-    file: ${RABBITMQ_MGMT_KEY_PATH}
-  rabbitmq-server-cert:
-    file: ${RABBITMQ_MGT_CERT_PATH}
-  rabbitmq-ca-cert:
-    file: ${RABBITMQ_MGT_CA_CERT_PATH}
   api-gateway-server-key:
     file: ${AG_KEY_PATH}
   api-gateway-server-cert:

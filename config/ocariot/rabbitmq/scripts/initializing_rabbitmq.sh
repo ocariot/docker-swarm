@@ -13,7 +13,7 @@ add_user()
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --silent \
             --output /tmp/admin_credential.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/rabbitmq/credential)
+            ${VAULT_BASE_URL}/v1/secret/data/rabbitmq/credential)
     done
 
     CREDENTIAL=$(cat /tmp/admin_credential.json | jq '.data.data.user, .data.data.passwd')
@@ -67,7 +67,7 @@ get_certificates()
             --data-binary "{\"common_name\": \"rabbitmq\"}" \
             --silent \
             --output /tmp/certificates.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/pki/issue/rabbitmq)
+            ${VAULT_BASE_URL}/v1/pki/issue/rabbitmq)
 
     done
 
@@ -132,7 +132,7 @@ revoke_token()
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --request POST \
             --silent \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/auth/token/revoke-self -w "%{http_code}\n")
+            ${VAULT_BASE_URL}/v1/auth/token/revoke-self -w "%{http_code}\n")
     done
 
     # Removing the environment variable access token
