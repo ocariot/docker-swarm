@@ -19,7 +19,7 @@ get_public_jwt()
                     --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
                     --silent \
                     --output /tmp/jwt_public_key.json -w "%{http_code}\n" \
-                    ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/jwt)
+                    ${VAULT_SERVICE}/v1/secret/data/${HOSTNAME}/jwt)
         echo ${RET}
     done
 

@@ -44,11 +44,11 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.3.3/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.0/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.3.3/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.0/install.sh | sudo bash
 ```
 
 
@@ -60,8 +60,9 @@ If script execution is successful, the ocariot command will be recognized by bas
 
 :pushpin: Note: The directory adopted for installing the software is a location that requires sudo privileges, therefore, for the execution of the ocariot command, the sudo prefix will always be necessary. For example: `sudo ocariot stack start`. 
 
+## 2. Ocariot services stack
 
-## 2. Set the environment variables
+### 2.1 Set the environment variables
 To ensure flexibility and increase the security of the platform, the OCARIoT services receive some parameters through environment variables, e.g. IPs, credentials (username and password), etc.
 
 There are two ways to edit these environment variables. The first is during the first startup (`sudo ocariot stack start`), where the file containing these variables will be opened automatically with the standard editor. After making the necessary settings and saving the file, initialization will continue. 
@@ -72,42 +73,36 @@ On future start-ups, the settings file will not be opened automatically. Consequ
 $ sudo ocariot stack edit-config
 ```
 
-### 2.1 External Service URL
+#### 2.1.1 External Service URL
 Variables to define the URL of services to be exposed, such as Vault and RabbitMQ Management. This is useful for viewing data saved in Vault and managing the Message Bus.
 
 | Variable | Description | Example |
 | -------- | ----------- | ------- |
-| `VAULT_BASE_URL` |  Vault service URL. Used by internal services in requests to Vault.  It is not necessary to define a port, it is defined in another variable. | `https://api.ocariot.com.br` |
-| `RABBITMQ_MGT_BASE_URL` | RabbitMQ Management URL. Used by internal services in requests to RabbitMQ.  It is not necessary to define a port, it is defined in another variable. | `https://api.ocariot.com.br` |
+| `API_GATEWAY_HOSTNAME` |  API Gateway hostname. | `api.ocariot.com.br` |
+| `VAULT_HOSTNAME` |  Vault HashiCorp hostname. | `vault.ocariot.com.br` |
+| `RABBIT_MGT_HOSTNAME` |  RabbitMQ Management hostname. | `rabbit.ocariot.com.br` |
+| `MONITOR_HOSTNAME` | Monitor/Grafana hostname. | `monitor.ocariot.com.br` |
 
-
-### 2.2 External Service Ports
+#### 2.1.2 External Service Ports
 Variables to define the ports of services to be exposed, such as API Gateway, Vault, and RabbitMQ Management.
 
 | Variable | Description | Example |
 | -------- | ----------- | ------- |
 | `AG_PORT_HTTP` |  Port used by the API Gateway service to listen for HTTP request. Automatically redirects to HTTPS port. | `80` |
 | `AG_PORT_HTTPS` | Port used by the API Gateway service to listen for HTTPS request. | `443` |
-| `VAULT_PORT` | Port used by the Vault service to listen for HTTPS request. | `8200` |
-| `RABBITMQ_MGT_PORT` | Port used by RabbitMQ Management to service the HTTPS request. | `15671` |
 
 
-### 3.3 Certificates/keys
+#### 2.1.3 Certificates/keys
 Variables to define the ports of services to be exposed, such as API Gateway, Vault, and RabbitMQ Management.
 
 | Variable | Description | Example |
 | -------- | ----------- | ------- |
 | `AG_KEY_PATH` | API Gateway private key. | `mycerts/privkey.pem` |
 | `AG_CERT_PATH` | API Gateway domain certificate/public key. | `mycerts/fullchain.pem` |
-| `VAULT_KEY_PATH` | Vault private key. | `mycerts/privkey.pem` |
-| `VAULT_CERT_PATH` | Vault domain certificate/public key. | `mycerts/cert.pem` |
-| `VAULT_CA_CERT_PATH` | Vault CA certificate. | `mycerts/chain.pem` |
-| `RABBITMQ_MGMT_KEY_PATH` | RabbitMQ Management private key. | `mycerts/privkey.pem` |
-| `RABBITMQ_MGT_CERT_PATH` | RabbitMQ Management domain certificate/public key. | `mycerts/cert.pem` |
-| `RABBITMQ_MGT_CA_CERT_PATH` | RabbitMQ Management CA certificate. | `mycerts/chain.pem` |
 
 
-### 4.4 Data Sync Setup
+
+#### 2.1.4 Data Sync Setup
 Variables used by the Data Sync Agent microservice, responsible for data synchronization between Fitbit and OCARIoT platforms. This information is provided by Fitbit when registering an OAuth2 client. Please, **contact the partner responsible for microservice development to obtain the values for each variable.**
 
 | Variable | Description | Example |
@@ -116,8 +111,18 @@ Variables used by the Data Sync Agent microservice, responsible for data synchro
 | `FITBIT_CLIENT_SECRET` |  Client Secret for Fitbit Application resposible to manage user data. This information is later shared through the REST API to the android application _(DA App)_. | `1234ab56cd789123wzd123a` |
 | `EXPRESSION_AUTO_SYNC` | Frequency time that the application will sync the users data in background according to the crontab expression. For example, the value `0 * * * *` means that synchronization will occur every hour. | `"0 * * * *"` |
 
+#### 2.1.5 Authorization/Authentication Setup
 
-## 3. Building and Deploying the containers
+Variables to define the administrator user's credentials the first time the platform is instantiated.
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `ADMIN_USERNAME` | Username of the default admin user created automatically at the first time the OCARIoT platform is instantiated. | `admin` |
+| `ADMIN_PASSWORD` | Password of the default admin user created automatically at the first time the OCARIoT platform is instatiated. | `admin` |
+
+### 2.2 Building and Deploying the containers
+
+#### 2.2.1 Start containers
 
 To execute all the necessary commands to lift the entire stack of containers use the following interface:
 
@@ -131,7 +136,7 @@ Lifting all containers may take a few seconds or a few minutes. When the entire 
 >
 >:warning: **It is also noteworthy that these keys must be kept in an offline environment, considering that the leakage of such keys will result in an environment of high vulnerability.**
 
-## 4. Stop containers
+#### 2.2.2 Stop containers
 To stop the stack, you can run the `stop` interface . This will cause all containers to be stopped. The volumes will remain intact.
 
 ```sh
@@ -143,7 +148,7 @@ $ sudo ocariot stack stop
 - `--services <values>` - Defines a set of services to be stopped. The delimiter for specifying one more service is space. For example: `sudo ocariot stack stop --services account iot-tracking`;
 - `--clear-volumes` - Argument used to remove all volumes. However, **be careful as the process is irreversible.**
 
-## 4. Backup
+#### 2.2.3 Backup
 
 To perform the backup generation of all volumes used by the OCARIoT platform, the following interface is reserved:
 
@@ -159,7 +164,7 @@ $ sudo ocariot stack backup
 - `--expression <values>` - Parameter used to define a crontab expression that will schedule the generation of a backup. The value of this option must be passed in double quotes. Example: `sudo ocariot stack backup --expression "0 3 * * *"`;
 - `--path <values>` - Parameter used to specify the path where the backup will be saved. If this option is omitted, the backup files will be placed at the place of execution of the command currently described.
 
-## 5. Restore
+#### 2.2.4 Restore
 In order to restore all backups of the volumes present in the current path, the following interface is reserved:
 
 ```sh
@@ -173,9 +178,9 @@ $ sudo ocariot stack restore
 - `--keys` - Specifies the location of the file containing the encryption keys and root token used by the vault. This file was generated at the first start of the OCARIoT stack using the command [`sudo ocariot stack start`](#3-Building-and-Deploying-the-containers). To restore only the cryptographic keys, the backup path must not have any backup files;
 - `--path` - Parameter used to specify the path where the backup files will be searched for restoring from a previous backup performed. If this option is omitted, the backup files will be searched at the place of execution of the command currently described;
 - `--services <values>` - Defines a set of services that will have their volumes restored. The delimiter for specifying one more service is space. For example: `sudo ocariot stack restore --services account iot-tracking`;
-- `--time` - You can restore from a particular backup by adding a time parameter to the command restore. For example, using restore `--time 3D `at the end in the above command will restore a backup from 3 days ago. See the [Duplicity manual](http://duplicity.nongnu.org/vers7/duplicity.1.html#toc8) to view the accepted time formats .
+- `--time` - You can restore from a particular backup by adding a time parameter to the command restore. For example, using restore `--time 3D `at the end in the above command will restore a backup from 3 days ago. See the [Duplicity manual](http://duplicity.nongnu.org/vers7/duplicity.1.html#toc8) to view the accepted time formats.
 
-## 5. Plataform Images Update
+#### 2.2.5 Plataform Images Update
 
 Interface used to update the docker images used by the OCARIoT microservices.
 
@@ -186,7 +191,93 @@ $ sudo ocariot stack update-images
 
 - `--services <values>` - Defines a set of images of the services to be updated. The delimiter for specifying one more service is space. For example: `sudo ocariot stack update-images --services account iot-tracking`.
 
-## 6. Update Software
+## 3. Health monitor services stack 
+
+### 3.1 Set the environment variables
+To ensure flexibility, the Health monitor services receive some parameters through environment variables, e.g. SMTP configurations, credentials (username and password), etc.
+
+There are two ways to edit these environment variables. The first is during the first startup (`sudo ocariot monitor start`), where the file containing these variables will be opened automatically with the standard editor. After making the necessary settings and saving the file, initialization will continue. 
+
+On future start-ups, the settings file will not be opened automatically. Consequently, the second way aims to make subsequent editions possible, for which the following interface is reserved:
+
+```sh
+$ sudo ocariot monitor edit-config
+```
+
+#### 3.1.1 Authorization/Authentication Setup
+
+Variables to define the administrator user's credentials the first time the Grafana is instantiated.
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `ADMIN_USERNAME` | Username of the default admin user created automatically at the first time the Grafana is instantiated. | `admin` |
+| `ADMIN_PASSWORD` | Password of the default admin user created automatically at the first time the Grafana is instantiated. | `admin` |
+
+#### 3.1.2 SMTP Setup
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `GF_SMTP_ENABLED` | Enable SMTP server settings. | `false` |
+| `GF_SMTP_HOST` | Host where the SMTP server is allocated. | `smtp:25` |
+| `GF_SMTP_USER` | Registered email on the SMTP server. It will be used to send emals when an alarm is detected. | `grafana@test.com` |
+| `GF_SMTP_PASSWORD` | Password for the email registered on the SMTP server. | `secret` |
+
+### 3.2 Building and Deploying the containers
+
+#### 3.2.1 Start containers
+
+To execute all the necessary commands to lift the entire stack of containers use the following interface:
+
+```sh
+$ sudo ocariot monitor start
+```
+
+Lifting all containers may take a few seconds or a few minutes.
+
+#### 3.2.2 Stop containers
+To stop the stack, you can run the `stop` interface . This will cause all containers to be stopped. The volumes will remain intact.
+
+```sh
+$ sudo ocariot monitor stop
+```
+
+*Optional parameters:*
+
+- `--services <values>` - Defines a set of services to be stopped. The delimiter for specifying one more service is space. For example: `sudo ocariot monitor stop --services grafana prometheus`;
+- `--clear-volumes` - Argument used to remove all volumes. However, **be careful as the process is irreversible.**
+
+#### 3.2.3 Backup
+
+To perform the backup generation of all volumes used by the OCARIoT platform, the following interface is reserved:
+
+```sh
+$ sudo ocariot monitor backup
+```
+
+:pushpin: Note: If they are running, the services that will participate in the backup operation will be temporarily stopped. At the end of the backup operation, all services that were active will be restarted automatically.
+
+*Optional parameters:*
+
+- `--services <values>` - Defines a set of services from which you want to generate the backup. The delimiter for specifying one more service is space. For example: `sudo ocariot monitor backup --services grafana prometheus`;
+- `--expression <values>` - Parameter used to define a crontab expression that will schedule the generation of a backup. The value of this option must be passed in double quotes. Example: `sudo ocariot monitor backup --expression "0 3 * * *"`;
+- `--path <values>` - Parameter used to specify the path where the backup will be saved. If this option is omitted, the backup files will be placed at the place of execution of the command currently described.
+
+#### 3.2.4 Restore
+In order to restore all backups of the volumes present in the current path, the following interface is reserved:
+
+```sh
+$ sudo ocariot monitor restore
+```
+
+:pushpin: Note: If they are running, the services that will participate in the restore operation will be temporarily stopped. At the end of the restore operation, all services that were active will be restarted automatically.
+
+*Optional parameters:*
+
+- `--path` - Parameter used to specify the path where the backup files will be searched for restoring from a previous backup performed. If this option is omitted, the backup files will be searched at the place of execution of the command currently described;
+- `--services <values>` - Defines a set of services that will have their volumes restored. The delimiter for specifying one more service is space. For example: `sudo ocariot monitor restore --services grafana prometheus`;
+- `--time` - You can restore from a particular backup by adding a time parameter to the command restore. For example, using restore `--time 3D `at the end in the above command will restore a backup from 3 days ago. See the [Duplicity manual](http://duplicity.nongnu.org/vers7/duplicity.1.html#toc8) to view the accepted time formats.
+
+## 4. Update Software
 
 Command used to update the OCARIoT software interfaces. It will be updated to the latest release.
 
@@ -194,7 +285,7 @@ Command used to update the OCARIoT software interfaces. It will be updated to th
 $ sudo ocariot update
 ```
 
-## 7. Uninstall
+## 5. Uninstall
 Interface used to uninstall the OCARIoT platform, this includes removing pre-scheduled backups. Running services will be stopped.
 
 ```sh
@@ -208,8 +299,6 @@ $ sudo ocariot uninstall
 -----
 
 ## Future Features
-- Integration of the MySQL database for the missions service;
-- Dashboard to monitor container health;
 - Log Manager;
 - Multiple replicas for important nodes.
 

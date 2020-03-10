@@ -29,7 +29,7 @@ get_certificates()
             --data-binary "{\"common_name\": \"${HOSTNAME}\"}" \
             --cacert /tmp/vault/ca.crt --silent \
             --output /tmp/certificates.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/pki/issue/${HOSTNAME})
+            ${VAULT_BASE_URL}/v1/pki/issue/${HOSTNAME})
     done
 
     # Processing and placing private key server for /tmp/mongodb/ssl/mongodb.pem file
@@ -59,7 +59,7 @@ while [[ $RET_CREDENTIAL -ne 200 ]]; do
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --cacert /tmp/vault/ca.crt --silent \
             --output /tmp/admin_credential.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/credential)
+            ${VAULT_BASE_URL}/v1/secret/data/${HOSTNAME}/credential)
 done
 
 # Processing credentials received
@@ -98,7 +98,9 @@ echo "Finalizing user creating"
 configure_environment()
 {
     # Processing "mongod.conf" file based in service hostname
-    sed s/__DOMAIN__/$(echo ${VAULT_BASE_URL} | grep -oE '[^/]*$')/g /tmp/base_conf_mongod > /tmp/mongod.conf
+    VAULT_PORT=$(echo ${VAULT_BASE_URL} | grep -oE "[^:]+$")
+    VAULT_URL=$(echo ${VAULT_BASE_URL} | sed "s/\(:\|\/\)/ /g" | awk '{print $2}')
+    sed s/__DOMAIN__/$(echo ${VAULT_URL} | grep -oE '[^/]*$')/g /tmp/base_conf_mongod > /tmp/mongod.conf
     sed -i s/__PORT__/${VAULT_PORT}/g /tmp/mongod.conf
     sed -i s/__PATH__/${HOSTNAME}/g /tmp/mongod.conf
 
@@ -138,7 +140,7 @@ revoke_token()
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --request POST \
             --cacert /tmp/vault/ca.crt --silent \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/auth/token/revoke-self -w "%{http_code}\n")
+            ${VAULT_BASE_URL}/v1/auth/token/revoke-self -w "%{http_code}\n")
     done
 
     # Removing the environment variable access token

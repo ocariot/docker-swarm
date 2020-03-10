@@ -5,6 +5,7 @@
 
 # Environment variables file
 .env
+.env.monitor
 
 # Certificates and keys directories
 .certs
@@ -14,4 +15,5 @@
 *.csr
 config/ocariot/vault/.tokens
 config/ocariot/vault/.keys
-backups/
+create-self-signed-certs.sh
+keys

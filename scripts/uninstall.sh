@@ -12,10 +12,12 @@ isInstalled()
     RET_OCARIOT_PROJECT=$?
 
     RET_CRONTAB_MONITOR=$(crontab -u ${USER} -l | grep -w "${WATCHDOG_COMMAND}")
-    RET_CRONTAB_BKP=$(crontab -u ${USER} -l | grep -w "${BKP_COMMAND}")
+    RET_OCARIOT_BKP_CRONTAB=$(crontab -u ${USER} -l | grep -w "${OCARIOT_BKP_COMMAND}")
+    RET_MONITOR_BKP_CRONTAB=$(crontab -u ${USER} -l | grep -w "${MONITOR_BKP_COMMAND}")
 
     if [ ! "${RET_CRONTAB_MONITOR}" ] &&
-      [ ! "${RET_CRONTAB_BKP}" ] &&
+      [ ! "${RET_OCARIOT_BKP_CRONTAB}" ] &&
+      [ ! "${RET_MONITOR_BKP_CRONTAB}" ] &&
       [ ${RET_OCARIOT_COMMAND} != 0 ] &&
       [ ${RET_OCARIOT_PROJECT} != 0 ]; then
         echo "false"
@@ -23,7 +25,6 @@ isInstalled()
     fi
     echo "true"
 }
-
 
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
@@ -43,18 +44,21 @@ if ([ "$1" != "--clear-volumes" ] && [ "$1" != "" ]) \
 fi
 
 WATCHDOG_COMMAND="ocariot_watchdog.sh"
-BKP_COMMAND="ocariot stack backup"
+OCARIOT_BKP_COMMAND="ocariot stack backup"
+MONITOR_BKP_COMMAND="ocariot monitor backup"
 
-docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
-STATUS_OCARIOT_STACK=$?
-
-if ([ "${STATUS_OCARIOT_STACK}" -eq 0 ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" ]); then
+if ([ "$(docker stack ls | grep ${OCARIOT_STACK_NAME})" ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" ]); then
   ${INSTALL_PATH}/scripts/stack/stop.sh ${CHECK_CLEAR_VOLUMES_PARAMETER}
+fi
+
+if ([ "$(docker stack ls | grep ${MONITOR_STACK_NAME})" ] || [ "${CHECK_CLEAR_VOLUMES_PARAMETER}" ]); then
+  ${INSTALL_PATH}/scripts/monitor/stop.sh ${CHECK_CLEAR_VOLUMES_PARAMETER}
 fi
 
 sudo rm -f /usr/local/bin/ocariot
 ( crontab -u ${USER} -l | sed "/${WATCHDOG_COMMAND}/d"; ) | crontab -u ${USER} -
-( crontab -u ${USER} -l | sed "/${BKP_COMMAND}/d"; ) | crontab -u ${USER} -
+( crontab -u ${USER} -l | sed "/${OCARIOT_BKP_COMMAND}/d"; ) | crontab -u ${USER} -
+( crontab -u ${USER} -l | sed "/${MONITOR_BKP_COMMAND}/d"; ) | crontab -u ${USER} -
 sudo rm -fR ${INSTALL_PATH}
 sudo rm -f /tmp/ocariot_watchdog.log /tmp/ocariot_backup.log
 

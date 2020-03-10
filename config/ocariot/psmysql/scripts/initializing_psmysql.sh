@@ -32,7 +32,7 @@ get_certificates()
             --data-binary "{\"common_name\": \"${HOSTNAME}\"}" \
             --cacert /tmp/vault/ca.crt --silent \
             --output /tmp/certificates.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/pki/issue/${HOSTNAME})
+            ${VAULT_BASE_URL}/v1/pki/issue/${HOSTNAME})
     done
 
     mkdir -p /etc/mysql-ssl/
@@ -69,7 +69,7 @@ while [[ $RET_CREDENTIAL -ne 200 ]]; do
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --cacert /tmp/vault/ca.crt --silent \
             --output /tmp/admin_credential.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret-v1/${HOSTNAME}/credential)
+            ${VAULT_BASE_URL}/v1/secret-v1/${HOSTNAME}/credential)
 done
 
 # Processing credentials received
@@ -122,8 +122,11 @@ configure_environment()
     # Clearing access token file
     > /tmp/access-token-${HOSTNAME}
 
+VAULT_PORT=$(echo ${VAULT_BASE_URL} | grep -oE "[^:]+$")
+VAULT_URL=$(echo ${VAULT_BASE_URL} | sed "s/:${VAULT_PORT}// g")
+
 cat > "/etc/keyring_vault.conf" << EOF
-vault_url = ${VAULT_BASE_URL}:${VAULT_PORT}
+vault_url = ${VAULT_URL}:${VAULT_PORT}
 secret_mount_point = secret-v1/psmysql-missions/encryptionKey
 token = ${VAULT_ACCESS_TOKEN}
 vault_ca = /tmp/vault/ca.crt
@@ -141,7 +144,7 @@ revoke_token()
             --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
             --request POST \
             --cacert /tmp/vault/ca.crt --silent \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/auth/token/revoke-self -w "%{http_code}\n")
+            ${VAULT_BASE_URL}/v1/auth/token/revoke-self -w "%{http_code}\n")
     done
 
     # Removing the environment variable access token
@@ -155,6 +158,13 @@ configure_environment
 ## Function to get server certificates from Vault
 get_certificates
 #
+
+set -a
+  # This variable is only useful during the first boot. Once
+  # authentication settings are established, their value will no longer be important
+  MYSQL_ALLOW_EMPTY_PASSWORD=true
+set +a
+
 ## Function to create admin user and to revoke Vault token after
 ## finalized configurations
 add_user &

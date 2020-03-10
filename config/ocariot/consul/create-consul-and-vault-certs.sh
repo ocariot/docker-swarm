@@ -117,19 +117,23 @@ generate_certificates()
         cp ${DIR}/ca.crt $2/
 }
 
-mkdir -p ${INSTALL_PATH}/config/ocariot//vault/.certs
-rm ${INSTALL_PATH}/config/ocariot//vault/.certs/* -f
+mkdir -p ${INSTALL_PATH}/config/ocariot/vault/.certs
+rm ${INSTALL_PATH}/config/ocariot/vault/.certs/* -f
 
-mkdir -p ${INSTALL_PATH}/config/ocariot//consul/.certs
-rm ${INSTALL_PATH}/config/ocariot//consul/.certs/* -f
+mkdir -p ${INSTALL_PATH}/config/ocariot/consul/.certs
+rm ${INSTALL_PATH}/config/ocariot/consul/.certs/* -f
 
 CONSUL_CLIENT="vault"
 
 CONSUL_SERVER="consul,server.ocariot.consul"
 
-generate_certificates ${CONSUL_CLIENT} ${INSTALL_PATH}/config/ocariot//vault/.certs "consul_client_vault"
+VAULT_SERVER="vault"
 
-generate_certificates ${CONSUL_SERVER} ${INSTALL_PATH}/config/ocariot//consul/.certs "server"
+generate_certificates ${CONSUL_CLIENT} ${INSTALL_PATH}/config/ocariot/vault/.certs "consul_client_vault"
+
+generate_certificates ${CONSUL_SERVER} ${INSTALL_PATH}/config/ocariot/consul/.certs "server"
+
+generate_certificates ${VAULT_SERVER} ${INSTALL_PATH}/config/ocariot/vault/.certs "server"
 
 # (Optional) Remove unused files at the moment
 rm -rf "${DIR}/ca.key" "${DIR}/ca.srl" ".srl" ${DIR}/*.cnf

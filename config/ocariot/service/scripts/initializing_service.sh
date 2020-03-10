@@ -21,7 +21,7 @@ get_psmdb_credential()
                 --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
                 --silent \
                 --output /tmp/psmdb_credential.json -w "%{http_code}\n" \
-                ${VAULT_BASE_URL}:${VAULT_PORT}/v1/database/creds/${HOSTNAME})
+                ${VAULT_BASE_URL}/v1/database/creds/${HOSTNAME})
     done
 
     # Identifying the service that is running the script
@@ -54,7 +54,7 @@ get_psmdb_credential()
                     --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
                     --silent \
                     --output /tmp/keystore_pass.json -w "%{http_code}\n" \
-                    ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/keystore_pass)
+                    ${VAULT_BASE_URL}/v1/secret/data/${HOSTNAME}/keystore_pass)
             # The requests are realized every 2 seconds
             sleep 2
         done
@@ -93,7 +93,7 @@ get_rabbitmq_credential()
                 --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
                 --silent \
                 --output /tmp/rabbitmq_credential.json -w "%{http_code}\n" \
-                ${VAULT_BASE_URL}:${VAULT_PORT}/v1/rabbitmq/creds/read_write)
+                ${VAULT_BASE_URL}/v1/rabbitmq/creds/read_write)
     done
 
     # Processing credentials received
@@ -134,7 +134,7 @@ get_certificates()
             --data-binary "{\"common_name\": \"${HOSTNAME}\"}" \
             --silent \
             --output /tmp/certificates.json -w "%{http_code}\n" \
-            ${VAULT_BASE_URL}:${VAULT_PORT}/v1/pki/issue/${HOSTNAME})
+            ${VAULT_BASE_URL}/v1/pki/issue/${HOSTNAME})
     done
 
     # Processing certificates
@@ -217,14 +217,14 @@ get_jwt_encrypt_keys()
                     --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
                     --silent \
                     --output /tmp/jwt_keys.json -w "%{http_code}\n" \
-                    ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/jwt)
+                    ${VAULT_BASE_URL}/v1/secret/data/${HOSTNAME}/jwt)
 
             # Request to get encrypt secret key from Vault
             ENCRYPT_SECRET_KEY_RET=$(curl \
                     --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
                     --silent \
                     --output /tmp/encrypt_secret_key.json -w "%{http_code}\n" \
-                    ${VAULT_BASE_URL}:${VAULT_PORT}/v1/secret/data/${HOSTNAME}/encrypt-secret-key)
+                    ${VAULT_BASE_URL}/v1/secret/data/${HOSTNAME}/encrypt-secret-key)
         done
 
         # Processing JWT keys and encrypt secret key

@@ -3,19 +3,21 @@
 INSTALL_PATH="/opt/ocariot-swarm"
 OCARIOT_STACK_NAME="ocariot"
 MONITOR_STACK_NAME="ocariot_monitor"
+ENV_OCARIOT=".env"
+ENV_MONITOR=".env.monitor"
 
-# Used for start, update and volumes scripts
+# Used for stack start and monitor start
 set_variables_environment()
 {
     # Verifying the existence of .env file
-    if [ ! $(find ${INSTALL_PATH} -name .env) ]
+    if [ ! $(find ${INSTALL_PATH} -name $1) ]
     then
-       cp ${INSTALL_PATH}/.env.example ${INSTALL_PATH}/.env
-       editor ${INSTALL_PATH}/.env
+       cp ${INSTALL_PATH}/$1.example ${INSTALL_PATH}/$1
+       editor ${INSTALL_PATH}/$1
     fi
 
     # Executing .env to capture environment variable defined in it
-    set -a && . ${INSTALL_PATH}/.env && set +a
+    set -a && . ${INSTALL_PATH}/$1 && set +a
 }
 
 # Used for start, update and volumes scripts
@@ -92,6 +94,24 @@ monitor_help()
     echo -e "\t\e[1m<action>\e[0m: \n \t\t \e[7mstart\e[27m: command used to \e[33minitialize\e[0m the stack of \
 services responsible for monitoring the health of containers.\
       \n \t\t \e[7mstop\e[27m: command used to \e[33mstop\e[0m the stack of services responsible for monitoring \
-the health of containers."
+the health of containers.
+      \n \t\t \e[7mbackup\e[27m: backs up all services in the ocariot_monitor stack. If you want to make back up a specific set \
+of services, use the \e[4m--services\e[0m option. If the \e[4m--path\e[0m option is not set, the backup will be  \
+saved to the current location. It is also possible to schedule the backup by passing a crontab expression in the \
+value of the \e[4m--expression\e[0m option. \
+			\n \t\t \e[7mrestore\e[27m: restore all services in the ocariot_monitor stack. If you want to restore a specific set of \
+services, use the \e[4m--services\e[0m option. If the \e[4m--path\e[0m option is not set, the restore command \
+will search for backup files in the current location. \
+    \n\t\e[1m<option>\e[0m: \n \t\t \e[7m--services <[values>\e[27m: define a set of services passed to a command. \
+			\n \t\t \e[7m--clear-volumes\e[27m: parameter used to clear all volumes used by monitor. \
+			\n \t\t \e[7m--time <value>\e[27m: You can restore from a particular backup by adding a time parameter to the \
+command restore. For example, using restore --time 3D at the end in the above command will restore a backup from \
+3 days ago. See the Duplicity manual to view the accepted time formats \
+(http://duplicity.nongnu.org/vers7/duplicity.1.html#toc8). \
+			\n \t\t \e[7m--path <value>\e[27m: parameter used to specify the path where the backup will be saved or where \
+the backup files will be searched for restoring from a previous backup performed. \
+			\n \t\t \e[7m--expression <value>\e[27m: parameter used to define a crontab expression that will be performed \
+hen scheduling the back up. The value of this option must be passed in double quotes. Example: sudo ocariot \
+monitor backup --expression \"0 3 * * *\""
     exit 1
 }

@@ -7,8 +7,6 @@ source ${INSTALL_PATH}/scripts/general_functions.sh
 # before starting services
 configure_environment()
 {
-    set_variables_environment
-
     mkdir ${INSTALL_PATH}/config/ocariot/vault/.tokens 2> /dev/null
 
     # creating the files that will be used to share
@@ -92,7 +90,6 @@ STATUS_OCARIOT_STACK=$?
 if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
     # General function for setting up the environment
     # before starting services
-
     configure_environment
 
     # Cleaning all files that contain the access tokens
@@ -109,7 +106,6 @@ if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
     fi
 else
     PARENT_PROCESS=$(ps -o args -p $PPID | tail -n +2 | grep -wo $(which ocariot))
-
     if [ "${PARENT_PROCESS}" ];then
         echo "Ocariot stack was already active."
         exit
@@ -118,11 +114,12 @@ fi
 
 ${INSTALL_PATH}/scripts/ocariot_watchdog.sh >> /tmp/ocariot_watchdog.log &
 
+set_variables_environment "${ENV_OCARIOT}"
+
 # Executing the services in mode swarm defined in docker-compose.yml file
 docker stack deploy -c ${INSTALL_PATH}/docker-ocariot-stack.yml ${OCARIOT_STACK_NAME} --resolve-image changed
 
 if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
-
     validate_keys "${GENERATE_KEYS_FILE}" &
     waiting_vault
     # Monitoring Vault service

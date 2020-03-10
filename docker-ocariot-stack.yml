@@ -2,7 +2,7 @@ version: "3.7"
 services:
   vault:
     hostname: vault
-    image: vault:latest
+    image: vault:1.3.3
     deploy:
       replicas: 1
       restart_policy:
@@ -10,55 +10,56 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - RABBITMQ_MGT_BASE_URL=${RABBITMQ_MGT_BASE_URL}
-      - RABBITMQ_MGT_PORT=${RABBITMQ_MGT_PORT}
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - RABBITMQ_MGT_BASE_URL=https://rabbitmq:15671
       - VAULT_ADDR=https://localhost:8200
       - VAULT_SKIP_VERIFY=true
     volumes:
-      - "./config/ocariot/vault/.keys:/etc/vault/.keys"
-      - "./config/ocariot/vault/policies:/etc/vault/policies/"
-      - "./config/ocariot/vault/.tokens:/etc/vault/.tokens/"
+      - type: bind
+        source: ./config/ocariot/vault/.keys
+        target: /etc/vault/.keys
+      - type: bind
+        source: ./config/ocariot/vault/policies
+        target: /etc/vault/policies/
+      - type: bind
+        source: ./config/ocariot/vault/.tokens
+        target: /etc/vault/.tokens/
     command: initializing_vault.sh
     configs:
       - source: ocariot-vault-config
         target: /etc/vault/config.hcl
+        mode: 0400
       - source: ocariot-init-vault-config
         target: /usr/bin/initializing_vault.sh
-        mode: 0750
+        mode: 0100
       - source: ocariot-create-token-vault-config
         target: /etc/vault/scripts/create_tokens.sh
-        mode: 0750
+        mode: 0100
       - source: ocariot-remove-token-vault-config
         target: /etc/vault/scripts/remove_tokens.sh
-        mode: 0750
-    ports:
-      - ${VAULT_PORT}:8200
+        mode: 0100
     secrets:
       - source: consul-ca-cert
         target: /etc/consul/.certs/ca.crt
-        mode: 0660
+        mode: 0400
       - source: consul-client-vault-key
         target: /etc/consul/.certs/client.key
-        mode: 0660
+        mode: 0400
       - source: consul-client-vault-cert
         target: /etc/consul/.certs/client.key.pub
-        mode: 0660
+        mode: 0400
       - source: vault-ca-cert
         target: /etc/vault/.certs/ca.crt
-        mode: 0660
+        mode: 0400
       - source: vault-server-key
         target: /etc/vault/.certs/server.key
-        mode: 0660
+        mode: 0400
       - source: vault-server-cert
         target: /etc/vault/.certs/server.cert
-        mode: 0660
-      - source: rabbitmq-ca-cert
-        target: /etc/rabbitmq/.certs/ca.cert
-        mode: 0660
+        mode: 0400
     depends_on:
       - consul
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -66,7 +67,7 @@ services:
 
   consul:
     hostname: consul
-    image: consul:latest
+    image: consul:1.7.1
     deploy:
       replicas: 1
       restart_policy:
@@ -74,7 +75,9 @@ services:
         delay: 15s
         max_attempts: 15
     volumes:
-      - "consul-data:/consul/data"
+      - type: volume
+        source: consul-data
+        target: /consul/data
     command:
       - sh
       - -c
@@ -85,15 +88,17 @@ services:
     secrets:
       - source: consul-ca-cert
         target: /etc/consul/.certs/ca.crt
-        mode: 0660
+        mode: 0400
       - source: consul-server-key
         target: /etc/consul/.certs/server.key
-        mode: 0660
+        mode: 0400
       - source: consul-server-cert
         target: /etc/consul/.certs/server.cert
-        mode: 0660
+        mode: 0400
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -110,24 +115,30 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
-      - "psmdb-account-data:/data/db"
-      - "./config/ocariot/vault/.tokens/access-token-psmdb-account:/tmp/access-token-psmdb-account"
+      - type: volume
+        source: psmdb-account-data
+        target: /data/db
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-psmdb-account
+        target: /tmp/access-token-psmdb-account
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
         target: /tmp/base_conf_mongod
+        mode: 400
       - source: ocariot-init-psmdb-config
         target: /usr/bin/initializing_psmdb.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -144,24 +155,30 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
-      - "psmdb-iot-tracking-data:/data/db"
-      - "./config/ocariot/vault/.tokens/access-token-psmdb-iot-tracking:/tmp/access-token-psmdb-iot-tracking"
+      - type: volume
+        source: psmdb-iot-tracking-data
+        target: /data/db
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-psmdb-iot-tracking
+        target: /tmp/access-token-psmdb-iot-tracking
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
         target: /tmp/base_conf_mongod
+        mode: 400
       - source: ocariot-init-psmdb-config
         target: /usr/bin/initializing_psmdb.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -178,24 +195,30 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
-      - "psmdb-ds-agent-data:/data/db"
-      - "./config/ocariot/vault/.tokens/access-token-psmdb-ds-agent:/tmp/access-token-psmdb-ds-agent"
+      - type: volume
+        source: psmdb-ds-agent-data
+        target: /data/db
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-psmdb-ds-agent
+        target: /tmp/access-token-psmdb-ds-agent
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
         target: /tmp/base_conf_mongod
+        mode: 400
       - source: ocariot-init-psmdb-config
         target: /usr/bin/initializing_psmdb.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -212,24 +235,30 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
-      - "psmdb-quest-data:/data/db"
-      - "./config/ocariot/vault/.tokens/access-token-psmdb-quest:/tmp/access-token-psmdb-quest"
+      - type: volume
+        source: psmdb-quest-data
+        target: /data/db
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-psmdb-quest
+        target: /tmp/access-token-psmdb-quest
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
         target: /tmp/base_conf_mongod
+        mode: 400
       - source: ocariot-init-psmdb-config
         target: /usr/bin/initializing_psmdb.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -246,24 +275,30 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
-      - "psmdb-gamification-data:/data/db"
-      - "./config/ocariot/vault/.tokens/access-token-psmdb-gamification:/tmp/access-token-psmdb-gamification"
+      - type: volume
+        source: psmdb-gamification-data
+        target: /data/db
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-psmdb-gamification
+        target: /tmp/access-token-psmdb-gamification
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
         target: /tmp/base_conf_mongod
+        mode: 400
       - source: ocariot-init-psmdb-config
         target: /usr/bin/initializing_psmdb.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -280,24 +315,30 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
-      - "psmdb-food-data:/data/db"
-      - "./config/ocariot/vault/.tokens/access-token-psmdb-food:/tmp/access-token-psmdb-food"
+      - type: volume
+        source: psmdb-food-data
+        target: /data/db
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-psmdb-food
+        target: /tmp/access-token-psmdb-food
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
         target: /tmp/base_conf_mongod
+        mode: 400
       - source: ocariot-init-psmdb-config
         target: /usr/bin/initializing_psmdb.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -314,24 +355,30 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
-      - "psmdb-notification-data:/data/db"
-      - "./config/ocariot/vault/.tokens/access-token-psmdb-notification:/tmp/access-token-psmdb-notification"
+      - type: volume
+        source: psmdb-notification-data
+        target: /data/db
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-psmdb-notification
+        target: /tmp/access-token-psmdb-notification
     command: initializing_psmdb.sh
     configs:
       - source: ocariot-mongo-config
         target: /tmp/base_conf_mongod
+        mode: 400
       - source: ocariot-init-psmdb-config
         target: /usr/bin/initializing_psmdb.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -348,26 +395,30 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
-      - MYSQL_ROOT_PASSWORD=secret
+      - VAULT_BASE_URL=https://vault:8200
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-psmysql-missions:/tmp/access-token-psmysql-missions"
-      - "psmysql-missions-data:/var/lib/mysql"
+      - type: volume
+        source: psmysql-missions-data
+        target: /var/lib/mysql
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-psmysql-missions
+        target: /tmp/access-token-psmysql-missions
     command: initializing_psmysql.sh
     configs:
       - source: ocariot-mysql-config
         target: /etc/my.cnf
-        mode: 0444
+        mode: 0400
       - source: ocariot-init-psmysql-config
         target: /usr/bin/initializing_psmysql.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0644
+        mode: 0444
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -383,9 +434,16 @@ services:
         delay: 15s
         max_attempts: 15
     volumes:
-      - "redis-api-gateway-data:/data"
-      - "./config/ocariot/redisdb/redis.conf:/etc/redis.conf"
+      - type: volume
+        source: redis-api-gateway-data
+        target: /data
+    configs:
+      - source: ocariot-redis-config
+        target: /etc/redis.conf
+        mode: 0444
     command: ["redis-server", "/etc/redis.conf"]
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -401,9 +459,16 @@ services:
         delay: 15s
         max_attempts: 15
     volumes:
-      - "redis-ds-agent-data:/data"
-      - "./config/ocariot/redisdb/redis.conf:/etc/redis.conf"
+      - type: volume
+        source: redis-ds-agent-data
+        target: /data
+    configs:
+      - source: ocariot-redis-config
+        target: /etc/redis.conf
+        mode: 0444
     command: ["redis-server", "/etc/redis.conf"]
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -419,8 +484,6 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
       - NODE_ENV=production
       - PORT_HTTP=8080
       - PORT_HTTPS=8081
@@ -436,32 +499,43 @@ services:
       - MISSIONS_SERVICE=https://missions:8001
       - FOOD_SERVICE=https://food:9001
       - NOTIFICATION_SERVICE=https://notification:10001
+      - VAULT_SERVICE=https://vault:8200
+      - RABBIT_MGT_SERVICE=https://rabbitmq:15671
+      - MONITOR_SERVICE=http://grafana:3000
+      - API_GATEWAY_HOSTNAME=${API_GATEWAY_HOSTNAME}
+      - VAULT_HOSTNAME=${VAULT_HOSTNAME}
+      - RABBIT_MGT_HOSTNAME=${RABBIT_MGT_HOSTNAME}
+      - MONITOR_HOSTNAME=${MONITOR_HOSTNAME}
       - EMULATE_REDIS=false
       - PORT_REDIS=6379
       - HOST_REDIS=redis-api-gateway
     command: initializing_api_gateway.sh
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-api-gateway-service:/tmp/access-token-api-gateway-service"
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-api-gateway-service
+        target: /tmp/access-token-api-gateway-service
     ports:
       - ${AG_PORT_HTTP}:8080
       - ${AG_PORT_HTTPS}:8081
     configs:
       - source: ocariot-init-api-gateway-config
         target: /usr/bin/initializing_api_gateway.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
       - source: api-gateway-server-key
         target: /etc/.certs/server.key
-        mode: 0660
+        mode: 0400
       - source: api-gateway-server-cert
         target: /etc/.certs/server.cert
-        mode: 0660
+        mode: 0400
     depends_on:
       - redis-api-gateway
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -477,8 +551,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PORT_HTTP=3000
       - PORT_HTTPS=3001
@@ -486,20 +559,24 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-account-service:/tmp/access-token-account-service"
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-account-service
+        target: /tmp/access-token-account-service
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - psmdb-account
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -515,26 +592,29 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PORT_HTTP=4000
       - PORT_HTTPS=4001
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-iot-tracking-service:/tmp/access-token-iot-tracking-service"
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-iot-tracking-service
+        target: /tmp/access-token-iot-tracking-service
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - psmdb-iot-tracking
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -550,8 +630,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PORT_HTTP=5000
       - PORT_HTTPS=5001
@@ -560,21 +639,25 @@ services:
       - EXPRESSION_AUTO_SYNC=${EXPRESSION_AUTO_SYNC}
       - REDIS_URI=redis://redis-ds-agent:6379
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-ds-agent-service:/tmp/access-token-ds-agent-service"
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-ds-agent-service
+        target: /tmp/access-token-ds-agent-service
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - psmdb-ds-agent
       - redis-ds-agent
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -590,26 +673,29 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PROTOCOL=https
       - PORT=6001
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-quest-service:/tmp/access-token-quest-service"
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-quest-service
+        target: /tmp/access-token-quest-service
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - psmdb-quest
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -625,26 +711,29 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PROTOCOL=https
       - PORT=7001
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-gamification-service:/tmp/access-token-gamification-service"
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-gamification-service
+        target: /tmp/access-token-gamification-service
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - psmdb-gamification
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -660,26 +749,29 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PROTOCOL=https
       - PORT=8001
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-food-service:/tmp/access-token-food-service"
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-food-service
+        target: /tmp/access-token-food-service
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - psmdb-food
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -696,28 +788,31 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PORT_HTTPS=10001
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/keys/firebase_keyfile.json
       - RABBITMQ_SSL=true
     volumes:
       - ${FIREBASE_KEYFILE_PATH}:/etc/keys/firebase_keyfile.json:ro
-      - "./config/ocariot/vault/.tokens/access-token-notification-service:/tmp/access-token-notification-service"
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-notification-service
+        target: /tmp/access-token-notification-service
     entrypoint: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - psmdb-notification
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -733,8 +828,7 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=development
       - PORT=8000
       - SSL_PORT=8001
@@ -744,20 +838,24 @@ services:
       - DATABASE_SSL=true
       - UPLOAD_VOLUME=/files/
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-missions-service:/tmp/access-token-missions-service"
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-missions-service
+        target: /tmp/access-token-missions-service
     command: initializing_service.sh
     configs:
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
-        mode: 0750
+        mode: 0100
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
+        mode: 0400
     depends_on:
       - psmysql-missions
       - rabbitmq
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -773,40 +871,33 @@ services:
         delay: 15s
         max_attempts: 15
     environment:
-      - RABBITMQ_MGT_BASE_URL=${RABBITMQ_MGT_BASE_URL}
-      - VAULT_BASE_URL=${VAULT_BASE_URL}
-      - VAULT_PORT=${VAULT_PORT}
+      - VAULT_BASE_URL=https://vault:8200
     entrypoint: initializing_rabbitmq.sh
     volumes:
-      - "./config/ocariot/vault/.tokens/access-token-rabbitmq:/tmp/access-token-rabbitmq"
-      - "rabbitmq-data:/var/lib/rabbitmq"
+      - type: volume
+        source: rabbitmq-data
+        target: /var/lib/rabbitmq
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-rabbitmq
+        target: /tmp/access-token-rabbitmq
     configs:
       - source: ocariot-init-rabbitmq-config
         target: /usr/bin/initializing_rabbitmq.sh
-        mode: 0750
+        mode: 0100
       - source: ocariot-rabbitmq-conf
         target: /etc/rabbitmq/rabbitmq.conf
-        mode: 0750
+        mode: 0400
       - source: ocariot-rabbitmq-plugins
         target: /etc/rabbitmq/enabled_plugins
-        mode: 0750
-    ports:
-      - ${RABBITMQ_MGT_PORT:-15671}:15671
+        mode: 0400
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
-        mode: 0640
-      - source: rabbitmq-ca-cert
-        target: /etc/.certs/mgmt_ca.crt
-        mode: 0660
-      - source: rabbitmq-server-key
-        target: /etc/.certs/mgmt_server.key
-        mode: 0660
-      - source: rabbitmq-server-cert
-        target: /etc/.certs/mgmt_server.cert
-        mode: 0660
+        mode: 0400
     depends_on:
       - vault
+    networks:
+      - ocariot
     logging:
       driver: json-file
       options:
@@ -814,11 +905,11 @@ services:
 
 secrets:
   vault-server-key:
-    file: ${VAULT_KEY_PATH}
+    file: config/ocariot/vault/.certs/server.key
   vault-server-cert:
-    file: ${VAULT_CERT_PATH}
+    file: config/ocariot/vault/.certs/server.crt
   vault-ca-cert:
-    file: ${VAULT_CA_CERT_PATH}
+    file: config/ocariot/vault/.certs/ca.crt
   consul-server-key:
     file: config/ocariot/consul/.certs/server.key
   consul-server-cert:
@@ -829,12 +920,6 @@ secrets:
     file: config/ocariot/vault/.certs/consul_client_vault.key
   consul-client-vault-cert:
     file: config/ocariot/vault/.certs/consul_client_vault.crt
-  rabbitmq-server-key:
-    file: ${RABBITMQ_MGMT_KEY_PATH}
-  rabbitmq-server-cert:
-    file: ${RABBITMQ_MGT_CERT_PATH}
-  rabbitmq-ca-cert:
-    file: ${RABBITMQ_MGT_CA_CERT_PATH}
   api-gateway-server-key:
     file: ${AG_KEY_PATH}
   api-gateway-server-cert:
@@ -853,6 +938,8 @@ configs:
     file: config/ocariot/psmdb/mongod.conf
   ocariot-mysql-config:
     file: config/ocariot/psmysql/my.cnf
+  ocariot-redis-config:
+    file: config/ocariot/redisdb/redis.conf
   ocariot-create-token-vault-config:
     file: config/ocariot/vault/scripts/create_tokens.sh
   ocariot-remove-token-vault-config:
@@ -895,3 +982,10 @@ volumes:
     name: ocariot-redis-api-gateway-data
   redis-ds-agent-data:
     name: ocariot-redis-ds-agent-data
+
+networks:
+  ocariot:
+    name: ocariot
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
