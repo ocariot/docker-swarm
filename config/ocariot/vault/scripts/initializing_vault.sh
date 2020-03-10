@@ -94,7 +94,7 @@ check_rabbitmq()
     local RET=1
     while [[ $RET -ne 0 ]]; do
         echo "=> Waiting for confirmation of RabbitMQ service startup"
-        $(nc -vz $(echo ${RABBITMQ_MGT_BASE_URL} | grep -oE '[^/]*$') ${RABBITMQ_MGT_PORT}) 2> /dev/null
+        $(nc -vz ${RABBITMQ_URL} ${RABBITMQ_PORT}) 2> /dev/null
         RET=$?
         sleep 2
     done
@@ -203,7 +203,7 @@ configure_plugin()
 # Function used to generate encryption key used to encrypt data
 # stored in its PSMDB. In addition, this function generates
 # the admin user credentials and activates the database plugin.
-configure_psmdbs()
+configure_ps()
 {
     # Enabling the database plugin
     vault secrets enable database
@@ -462,10 +462,9 @@ main()
 
     echo "Token Generation Enabled"
 
-    # Function used to generate encryption key used to encrypt data
-    # stored in its PSMDB. In addition, this function generates
-    # the admin user credentials and activates the database plugin.
-    configure_psmdbs
+    # This function generates the admin user
+    # credentials and activates the database plugin.
+    configure_ps
 
     # This function generates the admin user
     # credentials and active the RabbitMQ plugin.

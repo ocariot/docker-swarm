@@ -12,7 +12,7 @@ edit_config()
   fi
 
   editor ${INSTALL_PATH}/$1
-  set -a && . ${INSTALL_PATH}/.$1 && set +a
+  set -a && . ${INSTALL_PATH}/$1 && set +a
 }
 
 get_last_tag()

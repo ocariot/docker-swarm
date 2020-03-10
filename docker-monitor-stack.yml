@@ -21,7 +21,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
-      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
+      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp.gmail.com:465}
       - GF_SMTP_USER=${GF_SMTP_USER:-grafana@test.com}
       - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD:-secret}
     volumes:
@@ -144,5 +144,6 @@ networks:
   ocariot:
     external: true
     name: ocariot
+    driver: overlay
     driver_opts:
       encrypted: "true"

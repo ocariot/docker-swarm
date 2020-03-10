@@ -218,7 +218,7 @@ Variables to define the administrator user's credentials the first time the Graf
 | Variable | Description | Example |
 | -------- | ----------- | ------- |
 | `GF_SMTP_ENABLED` | Enable SMTP server settings. | `false` |
-| `GF_SMTP_HOST` | Host where the SMTP server is allocated. | `smtp:25` |
+| `GF_SMTP_HOST` | Host where the SMTP server is allocated. | `smtp.gmail.com:465` |
 | `GF_SMTP_USER` | Registered email on the SMTP server. It will be used to send emals when an alarm is detected. | `grafana@test.com` |
 | `GF_SMTP_PASSWORD` | Password for the email registered on the SMTP server. | `secret` |
 
@@ -295,6 +295,14 @@ $ sudo ocariot uninstall
 *Optional parameters:*
 
 - `--clear-volumes` - Argument used to remove all volumes. However, **be careful as the process is irreversible.**
+
+## 6. Version
+
+Command used to view the current version of the installed OCARIoT software.
+
+```sh
+$ sudo ocariot version
+```
 
 -----
 

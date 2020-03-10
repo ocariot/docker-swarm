@@ -5,6 +5,23 @@ OCARIOT_STACK_NAME="ocariot"
 MONITOR_STACK_NAME="ocariot_monitor"
 ENV_OCARIOT=".env"
 ENV_MONITOR=".env.monitor"
+NETWORK_NAME="ocariot"
+
+create_network()
+{
+  echo "Trying create network."
+  if [ -z "$(docker network ls --filter name=${NETWORK_NAME} --format={{.Name}})" ]; then
+    docker network create --opt encrypted --driver overlay --attachable "${NETWORK_NAME}"
+  fi
+}
+
+delete_network()
+{
+  echo "Trying remove network."
+  if [ "$(docker network ls --filter name=${NETWORK_NAME} --format={{.Name}})" ]; then
+    docker network rm "${NETWORK_NAME}"
+  fi
+}
 
 # Used for stack start and monitor start
 set_variables_environment()
@@ -51,6 +68,7 @@ option of \e[4m--clear-volumes\e[0m.\
       \n \t\t \e[7mupdate\e[27m: command used to update the ocariot software. \
       \n \t\t \e[7mstack\e[27m: operations performed on the ocariot stack. Use \e[4msudo ocariot stack help\e[0m for more information. \
       \n \t\t \e[7mmonitor\e[27m: operations performed on the ocariot monitor stack. Use \e[4msudo ocariot monitor help\e[0m for more information. \
+      \n \t\t \e[7mversion\e[27m: command used to view the current version of the installed OCARIoT software. \
       \n\t\e[1m<option>\e[0m: \n \t\t \e[7m--clear-volumes\e[27m: parameter used to clear all volumes used on the ocariot platform. "
     exit 1
 }

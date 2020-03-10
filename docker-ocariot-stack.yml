@@ -985,6 +985,7 @@ volumes:
 
 networks:
   ocariot:
+    external: true
     name: ocariot
     driver: overlay
     driver_opts:

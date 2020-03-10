@@ -104,17 +104,13 @@ if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
         # certificates for VAULT access to CONSUL through SSL/TLS
         ${INSTALL_PATH}/config/ocariot/consul/create-consul-and-vault-certs.sh &> /dev/null
     fi
-else
-    PARENT_PROCESS=$(ps -o args -p $PPID | tail -n +2 | grep -wo $(which ocariot))
-    if [ "${PARENT_PROCESS}" ];then
-        echo "Ocariot stack was already active."
-        exit
-    fi
 fi
 
 ${INSTALL_PATH}/scripts/ocariot_watchdog.sh >> /tmp/ocariot_watchdog.log &
 
 set_variables_environment "${ENV_OCARIOT}"
+
+create_network
 
 # Executing the services in mode swarm defined in docker-compose.yml file
 docker stack deploy -c ${INSTALL_PATH}/docker-ocariot-stack.yml ${OCARIOT_STACK_NAME} --resolve-image changed
