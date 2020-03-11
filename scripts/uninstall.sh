@@ -26,11 +26,6 @@ isInstalled()
     echo "true"
 }
 
-if [ "$EUID" -ne 0 ]
-  then echo "Please run as root"
-  exit
-fi
-
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' | grep -P "\-\-clear\-volumes.*" -v | grep '\-\-')
 
 CHECK_CLEAR_VOLUMES_PARAMETER=$(echo $@ | grep -wo '\-\-clear\-volumes')
