@@ -275,20 +275,23 @@ configure_rabbitmq_plugin()
 
     vault read rabbitmq/roles/read_write &> /dev/null
 
-    if [ $? = 0 ]; then
-      return
+    if [ $? != 0 ]; then
+        # Defining username for admin user
+        local USER="ocariot"
+        # Generate password for admin user
+        local PASSWD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
+
+        # Saving the username and password as a secret in Vault
+        vault kv put secret/rabbitmq/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
+
+        # Enabling the RabbitMQ plugin
+        vault secrets enable rabbitmq
+    else
+        # Defining username for admin user
+        local USER=$(vault kv get -field="user" secret/rabbitmq/credential)
+        # Generate password for admin user
+        local PASSWD=$(vault kv get -field="passwd" secret/rabbitmq/credential)
     fi
-
-    # Defining username for admin user
-    local USER="ocariot"
-    # Generate password for admin user
-    local PASSWD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
-
-    # Saving the username and password as a secret in Vault
-    vault kv put secret/rabbitmq/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
-
-    # Enabling the RabbitMQ plugin
-    vault secrets enable rabbitmq
 
     # Configuring lease settings for generated credentials
     vault write /rabbitmq/config/lease ttl=${TTL_RABBITMQ_USER} max_ttl=${TTL_RABBITMQ_USER}

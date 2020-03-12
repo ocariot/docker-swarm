@@ -10,7 +10,7 @@ NETWORK_NAME="ocariot"
 create_network()
 {
   echo "Trying create network."
-  if [ -z "$(docker network ls --filter name=${NETWORK_NAME} --format={{.Name}})" ]; then
+  if [ -z "$(docker network ls --format={{.Name}} | grep -P "^${NETWORK_NAME}$")" ]; then
     docker network create --opt encrypted --driver overlay --attachable "${NETWORK_NAME}" &> /dev/null
     if [ $? != 0 ]; then
       echo "It was not possible to create the network. Probably another stack has already created the ocariot network."
@@ -21,7 +21,7 @@ create_network()
 delete_network()
 {
   echo "Trying remove network."
-  if [ "$(docker network ls --filter name=${NETWORK_NAME} --format={{.Name}})" ]; then
+  if [ "$(docker network ls --format={{.Name}} | grep -P "^${NETWORK_NAME}$")" ]; then
     docker network rm "${NETWORK_NAME}" &> /dev/null
     if [ $? != 0 ]; then
       echo "It was not possible to remove the network. Probably another stack is using the ocariot network."
