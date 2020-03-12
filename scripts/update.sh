@@ -13,19 +13,19 @@ update_env()
     return
   fi
 
-  cp $1.example $1.tmp
+  cp ${INSTALL_PATH}/$1.example ${INSTALL_PATH}/$1.tmp
 
-  VARIABLES=$(cat $1.example | grep -vP '^#' | sed '/^$/d;s/=.*//g')
+  VARIABLES=$(cat ${INSTALL_PATH}/$1.example | grep -vP '^#' | sed '/^$/d;s/=.*//g')
   for VAR in ${VARIABLES};do
     NEW_VARIABLE=$(grep -P "^${VAR}=" $1)
     if [ "${NEW_VARIABLE}" ];then
-      NEW_VARIABLE=$(echo ${NEW_VARIABLE} | sed 's/\//\\\//g')
-      sed -i "s/^${VAR}=.*/${NEW_VARIABLE}/g" $1.tmp
+      NEW_VARIABLE=$(echo "${NEW_VARIABLE}" | sed 's/\//\\\//g')
+      sed -i "s/^${VAR}=.*/${NEW_VARIABLE}/g" ${INSTALL_PATH}/$1.tmp
     fi
   done
 
-  rm -f $1
-  mv -f $1.tmp $1
+  rm -f ${INSTALL_PATH}/$1
+  mv -f ${INSTALL_PATH}/$1.tmp ${INSTALL_PATH}/$1
 }
 
 get_last_tag()
@@ -46,12 +46,25 @@ if ([ "$1" != "--version" ] && [ "$1" != "" ]) \
     ocariot_help
 fi
 
-TARGET=$(get_last_tag)
 if [ "${CHECK_VERSION_PARAMETER}" ];then
   TARGET=${VERSION_VALUE}
+else
+  TARGET=$(get_last_tag)
 fi
 
-echo ${TARGET}
+VALIDATION=$(echo ${TARGET} | grep -wP '^[0-9].[0-9].[0-9]$')
+
+if [ -z "${VALIDATION}" ]; then
+  echo "Invalid version."
+  exit
+fi
+
+FEATURE=$(echo ${TARGET} | sed 's/\./ /g' | awk '{print $2}')
+
+if [ ${FEATURE} -lt 2 ]; then
+  echo "Versions prior to 1.2.0 do not support the update operation".
+  exit
+fi
 
 sudo git -C ${INSTALL_PATH} reset --hard HEAD &> /dev/null
 sudo git -C ${INSTALL_PATH} fetch &> /dev/null

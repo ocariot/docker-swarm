@@ -11,7 +11,10 @@ create_network()
 {
   echo "Trying create network."
   if [ -z "$(docker network ls --filter name=${NETWORK_NAME} --format={{.Name}})" ]; then
-    docker network create --opt encrypted --driver overlay --attachable "${NETWORK_NAME}"
+    docker network create --opt encrypted --driver overlay --attachable "${NETWORK_NAME}" &> /dev/null
+    if [ $? != 0 ]; then
+      echo "It was not possible to create the network. Probably another stack has already created the ocariot network."
+    fi
   fi
 }
 
@@ -19,7 +22,10 @@ delete_network()
 {
   echo "Trying remove network."
   if [ "$(docker network ls --filter name=${NETWORK_NAME} --format={{.Name}})" ]; then
-    docker network rm "${NETWORK_NAME}"
+    docker network rm "${NETWORK_NAME}" &> /dev/null
+    if [ $? != 0 ]; then
+      echo "It was not possible to remove the network. Probably another stack is using the ocariot network."
+    fi
   fi
 }
 
@@ -65,11 +71,12 @@ ocariot_help()
     echo -e "\t\e[1m<action>\e[0m: \n \t\t \e[7muninstall\e[27m: command to uninstall the ocariot software. \
 It is also possible to delete all volumes used on the ocariot platform, passing the \
 option of \e[4m--clear-volumes\e[0m.\
-      \n \t\t \e[7mupdate\e[27m: command used to update the ocariot software. \
+      \n \t\t \e[7mupdate\e[27m: command used to update the ocariot software. It's possible specify the version using \e[4m--version\e[0m option\
       \n \t\t \e[7mstack\e[27m: operations performed on the ocariot stack. Use \e[4msudo ocariot stack help\e[0m for more information. \
       \n \t\t \e[7mmonitor\e[27m: operations performed on the ocariot monitor stack. Use \e[4msudo ocariot monitor help\e[0m for more information. \
       \n \t\t \e[7mversion\e[27m: command used to view the current version of the installed OCARIoT software. \
-      \n\t\e[1m<option>\e[0m: \n \t\t \e[7m--clear-volumes\e[27m: parameter used to clear all volumes used on the ocariot platform. "
+      \n\t\e[1m<option>\e[0m: \n \t\t \e[7m--clear-volumes\e[27m: parameter used to clear all volumes used on the ocariot platform. \
+      \n \t\t \e[7m--version\e[27m: Parameter defines the version to which you want to migrate the software. For example: \e[4msudo ocariot update --version 1.3.3\e[0m"
     exit 1
 }
 

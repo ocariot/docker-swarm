@@ -44,11 +44,11 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.0/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.1/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.0/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.1/install.sh | sudo bash
 ```
 
 
@@ -284,6 +284,10 @@ Command used to update the OCARIoT software interfaces. It will be updated to th
 ```sh
 $ sudo ocariot update
 ```
+
+*Optional parameters:*
+
+- `--version` - Defines the version to which you want to migrate the software. For example: `sudo ocariot update --version 1.3.3`;
 
 ## 5. Uninstall
 Interface used to uninstall the OCARIoT platform, this includes removing pre-scheduled backups. Running services will be stopped.
