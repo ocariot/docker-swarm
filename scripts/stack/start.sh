@@ -95,14 +95,17 @@ if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
     # Cleaning all files that contain the access tokens
     clear_tokens &> /dev/null
 
-    CERTS_CONSUL=$(ls ${INSTALL_PATH}/config/ocariot/consul/.certs/ 2> /dev/null)
-    CERTS_VAULT=$(ls ${INSTALL_PATH}/config/ocariot/vault/.certs/ 2> /dev/null)
+    CONSUL_SSL_FILES=$(ls ${INSTALL_PATH}/config/ocariot/consul/.certs/ 2> /dev/null)
+    CONSUL_CLIENT_CERTS=$(echo ${CONSUL_SSL_FILES} | grep 'client')
+    CONSUL_SERVER_CERTS=$(echo ${CONSUL_SSL_FILES}  | grep 'server')
 
-    if [ "${CERTS_CONSUL}" = "" ] || [ "${CERTS_VAULT}" = "" ];
+    VAULT_SERVER_CERTS=$(ls ${INSTALL_PATH}/config/ocariot/vault/.certs/ 2> /dev/null | grep 'server')
+
+    if [ -z "${CONSUL_CLIENT_CERTS}" ] || [ -z "${CONSUL_SERVER_CERTS}" ] || [ -z "${VAULT_SERVER_CERTS}" ];
     then
         # Creating server certificates for consul and client
         # certificates for VAULT access to CONSUL through SSL/TLS
-        ${INSTALL_PATH}/config/ocariot/consul/create-consul-and-vault-certs.sh &> /dev/null
+        ${INSTALL_PATH}/scripts/utils/create-consul-and-vault-certs.sh &> /dev/null
     fi
 fi
 

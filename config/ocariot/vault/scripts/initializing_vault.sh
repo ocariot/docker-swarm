@@ -170,13 +170,6 @@ configure_plugin()
     # Verifying if the PSMDB was already initialized
     check_ps $1 ${PORT}
 
-    vault read database/config/$1 &> /dev/null
-
-    if [ $? = 0 ]; then
-      return
-    fi
-
-
     # Trying establish connection with actual PSMDB
     local RET=1
     while [[ $RET -ne 0 ]]; do
