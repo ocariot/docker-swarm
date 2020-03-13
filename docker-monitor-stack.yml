@@ -67,7 +67,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/config.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+      - '--storage.tsdb.retention.time=${RETENTION_DATA:-15d}'
     volumes:
       - prometheus-data:/prometheus
     configs:

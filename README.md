@@ -222,6 +222,12 @@ Variables to define the administrator user's credentials the first time the Graf
 | `GF_SMTP_USER` | Registered email on the SMTP server. It will be used to send emals when an alarm is detected. | `grafana@test.com` |
 | `GF_SMTP_PASSWORD` | Password for the email registered on the SMTP server. | `secret` |
 
+#### 3.1.3 Storage Data
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `RETENTION_DATA` | Time the data remained stored. | `15d` - corresponds to 15 days |
+
 ### 3.2 Building and Deploying the containers
 
 #### 3.2.1 Start containers
