@@ -94,7 +94,7 @@ check_rabbitmq()
     local RET=1
     while [[ $RET -ne 0 ]]; do
         echo "=> Waiting for confirmation of RabbitMQ service startup"
-        $(nc -vz $(echo ${RABBITMQ_MGT_BASE_URL} | grep -oE '[^/]*$') ${RABBITMQ_MGT_PORT}) 2> /dev/null
+        $(nc -vz ${RABBITMQ_URL} ${RABBITMQ_PORT}) 2> /dev/null
         RET=$?
         sleep 2
     done
@@ -170,13 +170,6 @@ configure_plugin()
     # Verifying if the PSMDB was already initialized
     check_ps $1 ${PORT}
 
-    vault read database/config/$1 &> /dev/null
-
-    if [ $? = 0 ]; then
-      return
-    fi
-
-
     # Trying establish connection with actual PSMDB
     local RET=1
     while [[ $RET -ne 0 ]]; do
@@ -203,7 +196,7 @@ configure_plugin()
 # Function used to generate encryption key used to encrypt data
 # stored in its PSMDB. In addition, this function generates
 # the admin user credentials and activates the database plugin.
-configure_psmdbs()
+configure_ps()
 {
     # Enabling the database plugin
     vault secrets enable database
@@ -275,20 +268,23 @@ configure_rabbitmq_plugin()
 
     vault read rabbitmq/roles/read_write &> /dev/null
 
-    if [ $? = 0 ]; then
-      return
+    if [ $? != 0 ]; then
+        # Defining username for admin user
+        local USER="ocariot"
+        # Generate password for admin user
+        local PASSWD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
+
+        # Saving the username and password as a secret in Vault
+        vault kv put secret/rabbitmq/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
+
+        # Enabling the RabbitMQ plugin
+        vault secrets enable rabbitmq
+    else
+        # Defining username for admin user
+        local USER=$(vault kv get -field="user" secret/rabbitmq/credential)
+        # Generate password for admin user
+        local PASSWD=$(vault kv get -field="passwd" secret/rabbitmq/credential)
     fi
-
-    # Defining username for admin user
-    local USER="ocariot"
-    # Generate password for admin user
-    local PASSWD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-31} | head -n 1 | base64)
-
-    # Saving the username and password as a secret in Vault
-    vault kv put secret/rabbitmq/credential "user"=${USER} "passwd"=${PASSWD} > /dev/null
-
-    # Enabling the RabbitMQ plugin
-    vault secrets enable rabbitmq
 
     # Configuring lease settings for generated credentials
     vault write /rabbitmq/config/lease ttl=${TTL_RABBITMQ_USER} max_ttl=${TTL_RABBITMQ_USER}
@@ -462,10 +458,9 @@ main()
 
     echo "Token Generation Enabled"
 
-    # Function used to generate encryption key used to encrypt data
-    # stored in its PSMDB. In addition, this function generates
-    # the admin user credentials and activates the database plugin.
-    configure_psmdbs
+    # This function generates the admin user
+    # credentials and activates the database plugin.
+    configure_ps
 
     # This function generates the admin user
     # credentials and active the RabbitMQ plugin.

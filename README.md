@@ -44,11 +44,11 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.0/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.1/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.0/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.1/install.sh | sudo bash
 ```
 
 
@@ -218,9 +218,15 @@ Variables to define the administrator user's credentials the first time the Graf
 | Variable | Description | Example |
 | -------- | ----------- | ------- |
 | `GF_SMTP_ENABLED` | Enable SMTP server settings. | `false` |
-| `GF_SMTP_HOST` | Host where the SMTP server is allocated. | `smtp:25` |
+| `GF_SMTP_HOST` | Host where the SMTP server is allocated. | `smtp.gmail.com:465` |
 | `GF_SMTP_USER` | Registered email on the SMTP server. It will be used to send emals when an alarm is detected. | `grafana@test.com` |
 | `GF_SMTP_PASSWORD` | Password for the email registered on the SMTP server. | `secret` |
+
+#### 3.1.3 Storage Data
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `RETENTION_DATA` | Time the data remained stored. | `15d` - corresponds to 15 days |
 
 ### 3.2 Building and Deploying the containers
 
@@ -285,6 +291,10 @@ Command used to update the OCARIoT software interfaces. It will be updated to th
 $ sudo ocariot update
 ```
 
+*Optional parameters:*
+
+- `--version` - Defines the version to which you want to migrate the software. For example: `sudo ocariot update --version 1.3.3`;
+
 ## 5. Uninstall
 Interface used to uninstall the OCARIoT platform, this includes removing pre-scheduled backups. Running services will be stopped.
 
@@ -295,6 +305,14 @@ $ sudo ocariot uninstall
 *Optional parameters:*
 
 - `--clear-volumes` - Argument used to remove all volumes. However, **be careful as the process is irreversible.**
+
+## 6. Version
+
+Command used to view the current version of the installed OCARIoT software.
+
+```sh
+$ sudo ocariot version
+```
 
 -----
 

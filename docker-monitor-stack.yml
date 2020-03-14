@@ -21,7 +21,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
-      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp:25}
+      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp.gmail.com:465}
       - GF_SMTP_USER=${GF_SMTP_USER:-grafana@test.com}
       - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD:-secret}
     volumes:
@@ -29,6 +29,18 @@ services:
     configs:
       - source: ocariot-prom-data-src-grafana-config
         target: /etc/grafana/provisioning/datasources/prom_data_src.yaml
+        mode: 0400
+      - source: ocariot-dash-grafana-config
+        target: /etc/grafana/provisioning/dashboards/dash_config.yml
+        mode: 0400
+      - source: ocariot-nodes-dash-grafana-config
+        target: /etc/grafana/dashboards/nodes.json
+        mode: 0400
+      - source: ocariot-services-dash-grafana-config
+        target: /etc/grafana/dashboards/services.json
+        mode: 0400
+      - source: ocariot-prom-dash-grafana-config
+        target: /etc/grafana/dashboards/prometheus.json
         mode: 0400
     networks:
       - ocariot
@@ -55,7 +67,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/config.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+      - '--storage.tsdb.retention.time=${RETENTION_DATA:-15d}'
     volumes:
       - prometheus-data:/prometheus
     configs:
@@ -131,6 +143,14 @@ configs:
     file: config/monitor/prometheus/config.yml
   ocariot-prom-data-src-grafana-config:
     file: config/monitor/grafana/prom_data_src.yaml
+  ocariot-nodes-dash-grafana-config:
+    file: config/monitor/grafana/dashboards/nodes.json
+  ocariot-services-dash-grafana-config:
+    file: config/monitor/grafana/dashboards/services.json
+  ocariot-prom-dash-grafana-config:
+    file: config/monitor/grafana/dashboards/prometheus.json
+  ocariot-dash-grafana-config:
+    file: config/monitor/grafana/dashboards/dash_config.yml
   ocariot-init-node-exporter-config:
     file: config/monitor/node-exporter/docker-entrypoint.sh
 
@@ -144,5 +164,6 @@ networks:
   ocariot:
     external: true
     name: ocariot
+    driver: overlay
     driver_opts:
       encrypted: "true"
