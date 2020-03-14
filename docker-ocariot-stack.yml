@@ -41,10 +41,10 @@ services:
       - source: consul-ca-cert
         target: /etc/consul/.certs/ca.crt
         mode: 0400
-      - source: consul-client-vault-key
+      - source: consul-client-key
         target: /etc/consul/.certs/client.key
         mode: 0400
-      - source: consul-client-vault-cert
+      - source: consul-client-cert
         target: /etc/consul/.certs/client.key.pub
         mode: 0400
       - source: vault-ca-cert
@@ -916,10 +916,10 @@ secrets:
     file: config/ocariot/consul/.certs/server.crt
   consul-ca-cert:
     file: config/ocariot/consul/.certs/ca.crt
-  consul-client-vault-key:
-    file: config/ocariot/vault/.certs/consul_client_vault.key
-  consul-client-vault-cert:
-    file: config/ocariot/vault/.certs/consul_client_vault.crt
+  consul-client-key:
+    file: config/ocariot/consul/.certs/consul_client.key
+  consul-client-cert:
+    file: config/ocariot/consul/.certs/consul_client.crt
   api-gateway-server-key:
     file: ${AG_KEY_PATH}
   api-gateway-server-cert:
@@ -985,6 +985,7 @@ volumes:
 
 networks:
   ocariot:
+    external: true
     name: ocariot
     driver: overlay
     driver_opts:

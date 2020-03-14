@@ -129,7 +129,7 @@ CONSUL_SERVER="consul,server.ocariot.consul"
 
 VAULT_SERVER="vault"
 
-generate_certificates ${CONSUL_CLIENT} ${INSTALL_PATH}/config/ocariot/vault/.certs "consul_client_vault"
+generate_certificates ${CONSUL_CLIENT} ${INSTALL_PATH}/config/ocariot/consul/.certs "consul_client"
 
 generate_certificates ${CONSUL_SERVER} ${INSTALL_PATH}/config/ocariot/consul/.certs "server"
 

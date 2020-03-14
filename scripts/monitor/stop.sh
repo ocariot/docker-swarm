@@ -95,8 +95,10 @@ if ${REMOVE_STACK_CONFIG}; then
     remove_stack_config
 fi
 
-# If "-clear-volumes" parameter was passed the
+# If "--clear-volumes" parameter was passed the
 # volumes will be excluded
 if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
     clear_volumes "${SERVICES}"
 fi
+
+delete_network

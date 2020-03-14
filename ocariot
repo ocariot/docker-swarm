@@ -12,13 +12,7 @@ edit_config()
   fi
 
   editor ${INSTALL_PATH}/$1
-  set -a && . ${INSTALL_PATH}/.$1 && set +a
-}
-
-get_last_tag()
-{
-   JSON=$(curl -s https://api.github.com/repos/ocariot/docker-swarm/releases/latest)
-   echo ${JSON} | grep -oP '(?<="tag_name": ")[^"]*'
+  set -a && . ${INSTALL_PATH}/$1 && set +a
 }
 
 stack_options()
@@ -102,17 +96,7 @@ case $1 in
 		COMMAND="/scripts/uninstall.sh $(echo $@ | sed "s/$1//g")"
 		;;
   update)
-    LAST_TAG=$(get_last_tag)
-    sudo git -C ${INSTALL_PATH} reset --hard HEAD &> /dev/null
-    sudo git -C ${INSTALL_PATH} fetch &> /dev/null
-    sudo git -C ${INSTALL_PATH} checkout "tags/${LAST_TAG}" &> /dev/null
-
-    if [ ${LAST_TAG} = $(git -C ${INSTALL_PATH} describe --tags --abbrev=0) ];then
-      echo "OCARIoT Project updated successfully!"
-    else
-      echo "OCARIoT Project wasn't updated with success!"
-    fi
-		exit
+    COMMAND="/scripts/update.sh $(echo $@ | sed "s/$1//g")"
 		;;
   stack)
     EXPRESSION_BKP="$(echo "$@" | grep -o -P '(?<=--expression ).*' | sed 's/--.*//g')"

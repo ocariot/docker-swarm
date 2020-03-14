@@ -95,26 +95,25 @@ if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
     # Cleaning all files that contain the access tokens
     clear_tokens &> /dev/null
 
-    CERTS_CONSUL=$(ls ${INSTALL_PATH}/config/ocariot/consul/.certs/ 2> /dev/null)
-    CERTS_VAULT=$(ls ${INSTALL_PATH}/config/ocariot/vault/.certs/ 2> /dev/null)
+    CONSUL_SSL_FILES=$(ls ${INSTALL_PATH}/config/ocariot/consul/.certs/ 2> /dev/null)
+    CONSUL_CLIENT_CERTS=$(echo ${CONSUL_SSL_FILES} | grep 'client')
+    CONSUL_SERVER_CERTS=$(echo ${CONSUL_SSL_FILES}  | grep 'server')
 
-    if [ "${CERTS_CONSUL}" = "" ] || [ "${CERTS_VAULT}" = "" ];
+    VAULT_SERVER_CERTS=$(ls ${INSTALL_PATH}/config/ocariot/vault/.certs/ 2> /dev/null | grep 'server')
+
+    if [ -z "${CONSUL_CLIENT_CERTS}" ] || [ -z "${CONSUL_SERVER_CERTS}" ] || [ -z "${VAULT_SERVER_CERTS}" ];
     then
         # Creating server certificates for consul and client
         # certificates for VAULT access to CONSUL through SSL/TLS
-        ${INSTALL_PATH}/config/ocariot/consul/create-consul-and-vault-certs.sh &> /dev/null
-    fi
-else
-    PARENT_PROCESS=$(ps -o args -p $PPID | tail -n +2 | grep -wo $(which ocariot))
-    if [ "${PARENT_PROCESS}" ];then
-        echo "Ocariot stack was already active."
-        exit
+        ${INSTALL_PATH}/scripts/utils/create-consul-and-vault-certs.sh &> /dev/null
     fi
 fi
 
 ${INSTALL_PATH}/scripts/ocariot_watchdog.sh >> /tmp/ocariot_watchdog.log &
 
 set_variables_environment "${ENV_OCARIOT}"
+
+create_network
 
 # Executing the services in mode swarm defined in docker-compose.yml file
 docker stack deploy -c ${INSTALL_PATH}/docker-ocariot-stack.yml ${OCARIOT_STACK_NAME} --resolve-image changed
