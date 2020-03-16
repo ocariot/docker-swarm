@@ -133,54 +133,68 @@ fi
 VOLUMES_BKP=""
 RUNNING_SERVICES=""
 
+OCARIOT_VOLUMES=$(cat ${INSTALL_PATH}/docker-ocariot-stack.yml | grep -P "name: ocariot.*data" | sed 's/\(name:\| \)//g')
+EXPRESSION_GREP=$(echo "${OCARIOT_VOLUMES}" | sed 's/ /|/g')
+
 # Verifying if backup folder exist
-if [  "$1" = "restore" ] && [ "$(ls ${BKP_DIRECTORY} 2> /dev/null | grep -P 'ocariot.*data' | grep -v 'ocariot-monitor' |  wc -l)" = 0 ];
+if [ "$1" = "restore" ];
 then
-    echo "No container backup was found"
-    exit
+    DIRECTORIES=$(ls ${BKP_DIRECTORY} 2> /dev/null)
+    if [ $? -ne 0 ];then
+        echo "Directory not found."
+        exit
+    fi
+
+    EXIST_BKP=false
+    for DIRECTORY in ${DIRECTORIES}; do
+      if [ "$(echo "${OCARIOT_VOLUMES}" | grep -w "${DIRECTORY}")" ]; then
+        EXIST_BKP=true
+        break
+      fi
+    done
+
+    if ! ${EXIST_BKP}; then
+      echo "No container backup was found"
+      exit
+    fi
 fi
 
 if [ "${CONTAINERS_BKP}" = "" ]; then
 	if [ "$1" = "backup" ];
-    then
-        CONTAINERS_BKP=$(docker volume ls --format "{{.Name}}" --filter name=ocariot \
-            | grep -v 'ocariot-monitor' \
-            | sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
-    else
-        CONTAINERS_BKP=$(ls ${BKP_DIRECTORY} \
-            | grep -P 'ocariot.*data' \
-            | grep -v 'ocariot-monitor' \
-            | sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
-    fi
+  then
+      CONTAINERS_BKP=$(docker volume ls --format "{{.Name}}" \
+          | grep -oE "${EXPRESSION_GREP}" \
+          | sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
+  else
+      CONTAINERS_BKP=$(ls ${BKP_DIRECTORY} \
+          | grep -oE "${EXPRESSION_GREP}" \
+          | sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
+  fi
 fi
 
 CONTAINERS_BKP=$(echo ${CONTAINERS_BKP} | tr " " "\n" | sed "s/vault/${BACKEND_VAULT}/g" | sort -u)
 
 for CONTAINER_NAME in ${CONTAINERS_BKP};
 do
-    SERVICE_NAME=$(docker service ls \
-        --filter name=${OCARIOT_STACK_NAME} \
-        --format "{{.Name}}" \
-        | grep -w ${OCARIOT_STACK_NAME}_.*${CONTAINER_NAME} \
-        | grep -v 'ocariot-monitor')
+    SERVICE_NAME=$(docker stack services ${OCARIOT_STACK_NAME} --format={{.Name}} \
+        | grep -w ${OCARIOT_STACK_NAME}_.*${CONTAINER_NAME})
     RUNNING_SERVICES="${RUNNING_SERVICES} ${SERVICE_NAME}"
 
     if [ "$1" = "backup" ];
     then
         MESSAGE="Volume BKP ${CONTAINER_NAME} not found!"
         VOLUME_NAME=$(docker volume ls \
-            --filter name=ocariot \
             --format "{{.Name}}" \
-            | grep -w ${CONTAINER_NAME} \
-            | grep -v 'ocariot-monitor')
+            | grep -oE "${EXPRESSION_GREP}" \
+            | grep -w ${CONTAINER_NAME} )
     else
         MESSAGE="Not found ${CONTAINER_NAME} volume!"
         VOLUME_NAME=$(ls ${BKP_DIRECTORY} \
-            | grep -w ${CONTAINER_NAME} \
-            | grep -v 'ocariot-monitor')
+            | grep -oE "${EXPRESSION_GREP}" \
+            | grep -w ${CONTAINER_NAME})
     fi
 
-    if [ "${VOLUME_NAME}" = "" ]
+    if [ -z "${VOLUME_NAME}" ]
     then
         echo "${MESSAGE}"
         exit
@@ -188,9 +202,9 @@ do
     VOLUMES_BKP="${VOLUMES_BKP} ${VOLUME_NAME}"
 done
 
-if [ "${VOLUMES_BKP}" = "" ];
+if [ -z "${VOLUMES_BKP}" ];
 then
-    echo "Not found ocariot volumes!"
+    echo "Not found ${OCARIOT_STACK_NAME} volumes!"
     exit
 fi
 
@@ -213,11 +227,6 @@ done
 if [  "$(echo ${RUNNING_SERVICES} | grep ${BACKEND_VAULT})" ];
 then
     RUNNING_SERVICES="${RUNNING_SERVICES} ${OCARIOT_STACK_NAME}_vault"
-fi
-
-if [ "$#" = "1" ] && [ "$1" = "backup" ];
-then
-    RUNNING_SERVICES=$(docker stack ps ${OCARIOT_STACK_NAME} --format {{.Name}} | sed 's/\..*//g')
 fi
 
 remove_services "${RUNNING_SERVICES}"
