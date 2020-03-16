@@ -10,7 +10,7 @@ fi
 
 # Reading the policies related to each service
 SERVICE=$(ls /etc/vault/policies/ | sed s/.hcl//g | grep "^$(echo $1 | sed 's/\(ocariot_\|monitor_\|\..*\)//g')")
-SERVICE_NAME=$(echo $1 | sed 's/\./_/g;s/_[^_]*$//')
+SERVICE_NAME=$(echo $1 | sed 's/\./_/g')
 
 # Configuring time based in type token
 # If the token is for configuration only, the time is 10 minutes.

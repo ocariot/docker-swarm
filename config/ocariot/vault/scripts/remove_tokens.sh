@@ -6,7 +6,7 @@ then
     exit
 fi
 
-SERVICE_NAME=$(echo $1 | sed 's/\./_/g;s/_[^_]*$//')
+SERVICE_NAME=$(echo $1 | sed 's/\./_/g')
 
 LAST_ACCESSOR_TOKEN=$(cat "${ACCESSOR_TOKEN_FILE}" \
     | grep "${SERVICE_NAME}" \
