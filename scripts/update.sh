@@ -5,11 +5,11 @@ source ${INSTALL_PATH}/scripts/general_functions.sh
 
 update_env()
 {
-  if [ ! $(find ${INSTALL_PATH} -name $1.example) ];then
+  if [ -z "$(find ${INSTALL_PATH} -maxdepth 1 -name $1.example)" ];then
     return
   fi
 
-  if [ ! $(find ${INSTALL_PATH} -name $1) ];then
+  if [ -z "$(find ${INSTALL_PATH} -maxdepth 1 -name $1)" ];then
     return
   fi
 
@@ -17,7 +17,7 @@ update_env()
 
   VARIABLES=$(cat ${INSTALL_PATH}/$1.example | grep -vP '^#' | sed '/^$/d;s/=.*//g')
   for VAR in ${VARIABLES};do
-    NEW_VARIABLE=$(grep -P "^${VAR}=" $1)
+    NEW_VARIABLE=$(grep -P "^${VAR}=" ${INSTALL_PATH}/$1)
     if [ "${NEW_VARIABLE}" ];then
       NEW_VARIABLE=$(echo "${NEW_VARIABLE}" | sed 's/\//\\\//g')
       sed -i "s/^${VAR}=.*/${NEW_VARIABLE}/g" ${INSTALL_PATH}/$1.tmp
