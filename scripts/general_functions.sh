@@ -7,6 +7,19 @@ ENV_OCARIOT=".env"
 ENV_MONITOR=".env.monitor"
 NETWORK_NAME="ocariot"
 
+start_watchdog()
+{
+  ${INSTALL_PATH}/scripts/ocariot_watchdog.sh >> /tmp/ocariot_watchdog.log &
+}
+
+stop_watchdog()
+{
+  ps aux \
+    | grep -w ocariot_watchdog.sh \
+    | sed '/grep/d' \
+    | awk '{system("kill -9 "$2)}'
+}
+
 create_network()
 {
   echo "Trying create network."

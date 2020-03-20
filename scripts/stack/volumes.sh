@@ -45,6 +45,15 @@ validate_file_path()
   fi
 }
 
+registre_bkp_vault()
+{
+    STACK_ID=$(docker stack ps ${OCARIOT_STACK_NAME} --format "{{.ID}}" --filter "name=${OCARIOT_STACK_NAME}_vault" --filter "desired-state=running")
+    CONTAINER_ID=$(docker ps --format {{.ID}} --filter "name=${STACK_ID}")
+    echo "Executando script $2 para: $1"
+    docker exec -t ${CONTAINER_ID} vault kv put secret/map-accessor-token bkp_realized=true
+}
+
+
 BACKEND_VAULT="consul"
 
 VALIDATING_OPTIONS=$(echo $@ | sed 's/ /\n/g' \
@@ -227,6 +236,7 @@ done
 if [  "$(echo ${RUNNING_SERVICES} | grep ${BACKEND_VAULT})" ];
 then
     RUNNING_SERVICES="${RUNNING_SERVICES} ${OCARIOT_STACK_NAME}_vault"
+    registre_bkp_vault
 fi
 
 remove_services "${RUNNING_SERVICES}"

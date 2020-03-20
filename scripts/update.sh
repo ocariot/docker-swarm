@@ -66,11 +66,17 @@ if [ ${FEATURE} -lt 2 ]; then
   exit
 fi
 
+ACTUAL_VERSION=$(git -C ${INSTALL_PATH} describe --tags --abbrev=0)
+
 sudo git -C ${INSTALL_PATH} reset --hard HEAD &> /dev/null
 sudo git -C ${INSTALL_PATH} fetch &> /dev/null
 sudo git -C ${INSTALL_PATH} checkout "tags/${TARGET}" &> /dev/null
 
 if [ ${TARGET} = $(git -C ${INSTALL_PATH} describe --tags --abbrev=0) ];then
+  if [ "${ACTUAL_VERSION}" != ${TARGET} ];then
+    stop_watchdog
+    start_watchdog
+  fi
   update_env ${ENV_OCARIOT}
   update_env ${ENV_MONITOR}
   echo "OCARIoT Project updated successfully!"
