@@ -887,9 +887,6 @@ services:
       - source: ocariot-rabbitmq-conf
         target: /etc/rabbitmq/rabbitmq.conf
         mode: 0400
-      - source: ocariot-rabbitmq-plugins
-        target: /etc/rabbitmq/enabled_plugins
-        mode: 0400
     secrets:
       - source: vault-ca-cert
         target: /tmp/vault/ca.crt
@@ -932,8 +929,6 @@ configs:
     file: config/ocariot/consul/config.json
   ocariot-rabbitmq-conf:
     file: config/ocariot/rabbitmq/rabbitmq.conf
-  ocariot-rabbitmq-plugins:
-    file: config/ocariot/rabbitmq/enabled_plugins
   ocariot-mongo-config:
     file: config/ocariot/psmdb/mongod.conf
   ocariot-mysql-config:

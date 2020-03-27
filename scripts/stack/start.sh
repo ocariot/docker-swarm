@@ -109,7 +109,7 @@ if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
     fi
 fi
 
-${INSTALL_PATH}/scripts/ocariot_watchdog.sh >> /tmp/ocariot_watchdog.log &
+start_watchdog
 
 set_variables_environment "${ENV_OCARIOT}"
 

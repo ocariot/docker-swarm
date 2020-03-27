@@ -57,6 +57,8 @@ sudo rm -f /usr/local/bin/ocariot
 sudo rm -fR ${INSTALL_PATH}
 sudo rm -f /tmp/ocariot_watchdog.log /tmp/ocariot_backup.log
 
+stop_watchdog
+
 STATUS=$(isInstalled)
 if ! ${STATUS}; then
   echo "Uninstall realized with success!"
