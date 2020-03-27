@@ -1,16 +1,8 @@
 #!/bin/sh
-ACCESSOR_TOKEN_FILE="/tmp/accessor-token"
 
-if [ ! $(find /tmp -maxdepth 1 -name accessor-token) ]
-then
-    exit
-fi
+SERVICE_NAME=$(echo $1 | sed 's/\./_/g')
 
-SERVICE_NAME=$(echo $1 | sed 's/\./_/g;s/_[^_]*$//')
-
-LAST_ACCESSOR_TOKEN=$(cat "${ACCESSOR_TOKEN_FILE}" \
-    | grep "${SERVICE_NAME}" \
-    | awk '{print $2}')
+LAST_ACCESSOR_TOKEN=$(vault kv get -field="${SERVICE_NAME}" secret/map-accessor-token/)
 
 if [ "${LAST_ACCESSOR_TOKEN}" ];
 then
@@ -22,5 +14,13 @@ then
         vault token revoke -accessor ${LAST_ACCESSOR_TOKEN}
     fi
 
-    sed -i "/${SERVICE_NAME}/d" "${ACCESSOR_TOKEN_FILE}"
+    UPDATE_ACCESSORS=$(vault kv get secret/map-accessor-token/ \
+        | tail -n +12 | grep -vw ${SERVICE_NAME} \
+        | tr -s ' ' | tr ' ' '=')
+
+    if [ -z "${UPDATE_ACCESSORS}" ];then
+      vault kv metadata delete secret/map-accessor-token
+    else
+      vault kv put secret/map-accessor-token/ ${UPDATE_ACCESSORS}
+    fi
 fi

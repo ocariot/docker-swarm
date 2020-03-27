@@ -307,18 +307,6 @@ configure_rabbitmq_plugin()
 
 }
 
-# Function to remove all leases entered
-# in the first parameter of the function
-revoke_leases()
-{
-    # Getting root access token
-    ACCESSOR_ROOT=$(vault token lookup | grep accessor | sed 's/accessor*[ \t]*//g')
-
-    # Removing every lease informed in first parameter of
-    # revoke_leases () function, except the root token lease
-    printf "$1" | sed "/${ACCESSOR_ROOT}/d" | awk 'NR > 2{system("vault token revoke -accessor "$1)}'
-}
-
 # Function responsible to create the policies
 # that will be used in token generations
 generate_policies()
@@ -393,6 +381,26 @@ create_keystore_pass()
     vault kv put secret/notification-service/keystore_pass "value"="${KEYSTORE_PASS}"
 }
 
+# Enabling secrets enrollment in Vault
+configure_secret_plugins()
+{
+    vault secrets enable -version=1 -path=secret-v1/ kv
+    vault secrets enable -version=2 -path=secret/ kv
+}
+
+# Function to remove all leases entered
+# after restore backup is realized
+revoke_leases()
+{
+    vault kv get -field bkp_realized secret/map-accessor-token/
+    if [ $? -eq 0 ]; then
+      REVOKE_LEASES=$(vault kv get secret/map-accessor-token | tail -n +12 | awk '{print $1}')
+      for LEASE in ${REVOKE_LEASES}; do
+        /etc/vault/scripts/remove_tokens.sh ${LEASE}
+      done
+    fi
+}
+
 # Function responsible for setting up the
 # Vault environment and controlling system startup
 main()
@@ -434,12 +442,7 @@ main()
     add_certificate
 
     # Enabling secrets enrollment in Vault
-    vault secrets enable -version=1 -path=secret-v1/ kv &> /dev/null
-    vault secrets enable -version=2 -path=secret/ kv &> /dev/null
-
-    # Getting every access token that will be utilized
-    # to revoke the leases previously provided
-    TOKENS_TO_REVOKE=$(vault list /auth/token/accessors)
+    configure_secret_plugins &> /dev/null
 
     create_keystore_pass > /dev/null
 
@@ -466,12 +469,9 @@ main()
     # credentials and active the RabbitMQ plugin.
     configure_rabbitmq_plugin
 
-    if [[ $INITIALIZED_BEFORE == "true" ]]
-    then
-        # Function to remove all leases entered
-        # in the first parameter of the function
-        revoke_leases "${TOKENS_TO_REVOKE}"
-    fi
+    # Function to remove all leases entered
+    # after restore backup is realized
+    revoke_leases
 
     echo "Stack initialized successfully!!! :)"
     wget -qO - https://pastebin.com/raw/jNnscFJX

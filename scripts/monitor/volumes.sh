@@ -122,21 +122,41 @@ fi
 VOLUMES_BKP=""
 RUNNING_SERVICES=""
 
+MONITOR_VOLUMES=$(cat ${INSTALL_PATH}/docker-monitor-stack.yml | grep -P "name: ocariot.*data" | sed 's/\(name:\| \)//g')
+EXPRESSION_GREP=$(echo "${MONITOR_VOLUMES}" | sed 's/ /|/g')
+
 # Verifying if backup folder exist
-if [  "$1" = "restore" ] && [ "$(ls ${BKP_DIRECTORY} 2> /dev/null | grep -P 'ocariot-monitor.*data' | wc -l)" = 0 ];
+if [  "$1" = "restore" ];
 then
-    echo "No container backup was found"
-    exit
+    DIRECTORIES=$(ls ${BKP_DIRECTORY} 2> /dev/null)
+    if [ $? -ne 0 ];then
+        echo "Directory not found."
+        exit
+    fi
+
+    EXIST_BKP=false
+    for DIRECTORY in ${DIRECTORIES}; do
+      if [ "$(echo "${MONITOR_VOLUMES}" | grep -w "${DIRECTORY}")" ]; then
+        EXIST_BKP=true
+        break
+      fi
+    done
+
+    if ! ${EXIST_BKP}; then
+      echo "No container backup was found"
+      exit
+    fi
 fi
 
 if [ "${CONTAINERS_BKP}" = "" ]; then
 	if [ "$1" = "backup" ];
     then
-        CONTAINERS_BKP=$(docker volume ls --format "{{.Name}}" --filter name=ocariot-monitor \
+        CONTAINERS_BKP=$(docker volume ls --format "{{.Name}}" \
+            | grep -oE "${EXPRESSION_GREP}" \
             | sed 's/\(ocariot-monitor-\|-data\)//g')
     else
         CONTAINERS_BKP=$(ls ${BKP_DIRECTORY} \
-            | grep -P 'ocariot-monitor.*data' \
+            | grep -oE "${EXPRESSION_GREP}" \
             | sed 's/\(ocariot-monitor-\|-data\)//g')
     fi
 fi
@@ -145,8 +165,7 @@ CONTAINERS_BKP=$(echo ${CONTAINERS_BKP} | tr " " "\n" | sort -u)
 
 for CONTAINER_NAME in ${CONTAINERS_BKP};
 do
-    SERVICE_NAME=$(docker service ls \
-        --filter name=${MONITOR_STACK_NAME} \
+    SERVICE_NAME=$(docker stack services {MONITOR_STACK_NAME} \
         --format "{{.Name}}" \
         | grep -w ${MONITOR_STACK_NAME}_.*${CONTAINER_NAME})
     RUNNING_SERVICES="${RUNNING_SERVICES} ${SERVICE_NAME}"
@@ -155,16 +174,17 @@ do
     then
         MESSAGE="Volume BKP ${CONTAINER_NAME} not found!"
         VOLUME_NAME=$(docker volume ls \
-            --filter name=ocariot-monitor \
             --format "{{.Name}}" \
+            | grep -oE "${EXPRESSION_GREP}" \
             | grep -w ${CONTAINER_NAME})
     else
         MESSAGE="Not found ${CONTAINER_NAME} volume!"
         VOLUME_NAME=$(ls ${BKP_DIRECTORY} \
-            | grep -P "ocariot-monitor-${CONTAINER_NAME}-data")
+            | grep -oE "${EXPRESSION_GREP}" \
+            | grep -w ${CONTAINER_NAME})
     fi
 
-    if [ "${VOLUME_NAME}" = "" ]
+    if [ -z "${VOLUME_NAME}" ]
     then
         echo "${MESSAGE}"
         exit
@@ -172,9 +192,9 @@ do
     VOLUMES_BKP="${VOLUMES_BKP} ${VOLUME_NAME}"
 done
 
-if [ "${VOLUMES_BKP}" = "" ];
+if [ -z "${VOLUMES_BKP}" ];
 then
-    echo "Not found ocariot-monitor volumes!"
+    echo "Not found ${MONITOR_STACK_NAME} volumes!"
     exit
 fi
 
