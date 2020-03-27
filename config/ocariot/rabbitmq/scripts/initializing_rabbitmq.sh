@@ -1,5 +1,18 @@
 #!/bin/bash
 
+check_rabbitmq()
+{
+    # Waiting for RabbitMQ to boot
+    # code 69 refers to service unavailability
+    RET=69
+    while [ $RET -ne 0 ]
+    do
+        echo "=> Waiting for confirmation of RabbitMQ service startup..."
+        rabbitmqctl await_startup --timeout 20
+        RET=$?
+    done
+}
+
 # Function to create admin user and to revoke Vault token after
 # finalized configurations
 add_user()
@@ -23,28 +36,25 @@ add_user()
     # Password admin
     PASSWORD=$(echo $CREDENTIAL | awk 'NR == 1{print $2}' | sed 's/"//g')
 
-    # Waiting for RabbitMQ to boot
-    # code 69 refers to service unavailability
-    RET=69
-    while [ $RET -ne 0 ]
-    do
-        echo "=> Waiting for confirmation of RabbitMQ service startup..."
-        rabbitmqctl await_startup --timeout 20
-        RET=$?
-    done
+    ADMINISTRATOR=$(rabbitmqctl list_users | grep -E "^${USER}.*\[.*administrator.*\]$" | awk '{print $1}')
 
-    # Creating user admin
-    rabbitmqctl add_user $USER $PASSWORD
-    # Defining user as Administrator
-    rabbitmqctl set_user_tags $USER administrator
-    # Creating vhost ocariot
-    rabbitmqctl add_vhost ocariot
-    # Defining user with all capacities to manager vhost /
-    rabbitmqctl set_permissions -p / $USER ".*" ".*" ".*"
-    # Defining user with all capacities to manager vhost ocariot
-    rabbitmqctl set_permissions -p ocariot $USER ".*" ".*" ".*"
-    # Removing guest user
-    rabbitmqctl delete_user guest
+    # Function to check if RabbitMQ was initialized
+    check_rabbitmq
+
+    if [ -z "${ADMINISTRATOR}" ]; then
+      # Creating user admin
+      rabbitmqctl add_user $USER $PASSWORD
+      # Defining user as Administrator
+      rabbitmqctl set_user_tags $USER administrator
+      # Creating vhost ocariot
+      rabbitmqctl add_vhost ocariot
+      # Defining user with all capacities to manager vhost /
+      rabbitmqctl set_permissions -p / $USER ".*" ".*" ".*"
+      # Defining user with all capacities to manager vhost ocariot
+      rabbitmqctl set_permissions -p ocariot $USER ".*" ".*" ".*"
+      # Removing guest user
+      rabbitmqctl delete_user guest
+    fi
 
     rm /tmp/admin_credential.json
 
@@ -151,6 +161,9 @@ get_certificates "/etc/.certs/management" "=> Waiting for Manager certificates..
 # Function to create admin user and to revoke Vault token after
 # finalized configurations
 add_user &
+
+# Enable Management Plugin
+rabbitmq-plugins enable rabbitmq_management
 
 # Starting RabbitMQ
 rabbitmq-server
