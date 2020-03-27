@@ -14,12 +14,7 @@ execute_script()
     RET=$(check_vault)
     while [[ ${RET} != 1 ]];
     do
-        if [ "$(docker stack ls | grep -w ${OCARIOT_STACK_NAME})" = "" ];
-        then
-            return
-        fi
         RET=$(check_vault)
-        sleep 3
     done
 
     STACK_ID=$(docker stack ps ${OCARIOT_STACK_NAME} --format "{{.ID}}" --filter "name=${OCARIOT_STACK_NAME}_vault" --filter "desired-state=running")
@@ -45,22 +40,18 @@ docker events \
     --filter 'event=create' \
     --format '{{json .Actor.Attributes.name}} {{json .Action}}' \
     | while read event; do
-        RET=$(docker stack ls --format={{.Name}} | grep ${OCARIOT_STACK_NAME})
-        if [ "${RET}" ];
-        then
             EVENT=$(echo ${event} \
                     | sed 's/"//g')
-            CONTAINER_NAME=$(echo ${EVENT} | awk '{print $1}' | grep ${OCARIOT_STACK_NAME})
-            ACTION=$(echo ${EVENT} | awk '{print $2}')
+        CONTAINER_NAME=$(echo ${EVENT} | awk '{print $1}' | grep ${OCARIOT_STACK_NAME})
+        ACTION=$(echo ${EVENT} | awk '{print $2}')
 
-            SCRIPT_NAME="create_tokens"
-            if [ "${ACTION}" = "destroy" ];
-            then
-                SCRIPT_NAME="remove_tokens"
-            fi
+        SCRIPT_NAME="create_tokens"
+        if [ "${ACTION}" = "destroy" ];
+        then
+          SCRIPT_NAME="remove_tokens"
+        fi
 
-            if [ ${CONTAINER_NAME} ];then
-                execute_script ${CONTAINER_NAME} ${SCRIPT_NAME}
-            fi
+        if [ ${CONTAINER_NAME} ];then
+          execute_script ${CONTAINER_NAME} ${SCRIPT_NAME}
         fi
     done

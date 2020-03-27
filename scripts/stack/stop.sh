@@ -45,11 +45,6 @@ remove_stack_config()
 
 clear_environment()
 {
-    ps aux \
-        | grep -w ocariot_watchdog.sh \
-        | sed '/grep/d' \
-        | awk '{system("kill -9 "$2)}'
-
     rm ${INSTALL_PATH}/config/ocariot/vault/.certs/* -f
     rm ${INSTALL_PATH}/config/ocariot/consul/.certs/* -f
 }
