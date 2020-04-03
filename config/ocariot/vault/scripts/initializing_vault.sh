@@ -392,9 +392,10 @@ configure_secret_plugins()
 # after restore backup is realized
 revoke_leases()
 {
-    vault kv get -field bkp_realized secret/map-accessor-token/
-    if [ $? -eq 0 ]; then
-      REVOKE_LEASES=$(vault kv get secret/map-accessor-token | tail -n +12 | awk '{print $1}')
+    RET=$(vault kv get -field bkp_realized secret/map-accessor-token/)
+    if ${RET}; then
+      vault kv patch secret/map-accessor-token bkp_realized=false
+      REVOKE_LEASES=$(vault kv get secret/map-accessor-token | tail -n +12 | awk '{print $1}' | grep -wv "bkp_realized")
       for LEASE in ${REVOKE_LEASES}; do
         /etc/vault/scripts/remove_tokens.sh ${LEASE}
       done
@@ -459,6 +460,10 @@ main()
     # that will be used in token generations
     generate_policies
 
+    # Function to remove all leases entered
+    # after restore backup is realized
+    revoke_leases
+
     echo "Token Generation Enabled"
 
     # This function generates the admin user
@@ -468,10 +473,6 @@ main()
     # This function generates the admin user
     # credentials and active the RabbitMQ plugin.
     configure_rabbitmq_plugin
-
-    # Function to remove all leases entered
-    # after restore backup is realized
-    revoke_leases
 
     echo "Stack initialized successfully!!! :)"
     wget -qO - https://pastebin.com/raw/jNnscFJX
