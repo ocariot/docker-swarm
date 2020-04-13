@@ -462,7 +462,7 @@ main()
 
     # Function to remove all leases entered
     # after restore backup is realized
-    revoke_leases
+    revoke_leases > /dev/null
 
     echo "Token Generation Enabled"
 

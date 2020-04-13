@@ -37,12 +37,11 @@ remove_volumes()
     done
 }
 
-validate_file_path()
-{
-  ls $1 &> /dev/null
-  if [ $? != 0 ]; then
-    echo "Path $1 not found!"
-  fi
+validate_file_path() {
+	ls $1 &>/dev/null
+	if [ $? != 0 ] || [ -z "$1" ]; then
+		echo "Path $1 not found!"
+	fi
 }
 
 registre_bkp_vault()
@@ -142,7 +141,7 @@ VOLUMES_BKP=""
 RUNNING_SERVICES=""
 
 OCARIOT_VOLUMES=$(cat ${INSTALL_PATH}/docker-ocariot-stack.yml | grep -P "name: ocariot.*data" | sed 's/\(name:\| \)//g')
-EXPRESSION_GREP=$(echo "${OCARIOT_VOLUMES}" | sed 's/ /|/g')
+EXPRESSION_GREP=$(echo ${OCARIOT_VOLUMES} | sed 's/ /|/g')
 
 # Verifying if backup folder exist
 if [ "$1" = "restore" ];
