@@ -44,11 +44,11 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.3/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.0/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.4.3/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.0/install.sh | sudo bash
 ```
 
 
@@ -120,6 +120,51 @@ Variables to define the administrator user's credentials the first time the plat
 | `ADMIN_USERNAME` | Username of the default admin user created automatically at the first time the OCARIoT platform is instantiated. | `admin` |
 | `ADMIN_PASSWORD` | Password of the default admin user created automatically at the first time the OCARIoT platform is instatiated. | `admin` |
 
+#### 2.1.6 Data Backup Setup
+
+Variables responsible for defining backup settings. The variables with prefix `CLOUD` are commented out by default, to activate them uncommented and set their respective value based on the values provided by the cloud service that you want to perform the backups and restores. The supported cloud storage services are Google Drive and AWS S3.
+
+In order for backup and restore operations to be successful, credentials must be granted permissions to manipulate the cloud storage location:
+    
+- [Google Drive](https://console.developers.google.com/apis/credentials)
+When performing the first backup, a link will be provided that redirects the browser to a user's authentication screen at Google, thus granting permission to manipulate Google Drive. In future `backup` or `restore` operations, authentication is not required unless the `google_credentials` volume is removed
+
+- [AWS S3](https://docs.aws.amazon.com/pt_br/sdk-for-java/v1/developer-guide/signup-create-iam-user.html)
+To use the `backup` or` restore` operations, it is necessary to associate the following policy with the created user:
+
+```json=
+{
+    "Version":"2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:ListAllMyBuckets",
+            "Resource": "arn:aws:s3:::*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::BUCKET_NAME",
+                "arn:aws:s3:::BUCKET_NAME/*"
+            ]
+        }
+    ]
+}
+
+```
+> :warning: Note: Replace BUCKET_NAME with your bucket name!
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `LOCAL_TARGET` | Defined the path where the generated backup will be stored locally. | `/path/to/backup` |
+| `CLOUD_TARGET` | Define a URL and the path where the backup will be stored in the Google Drive or AWS S3 cloud. | `s3://s3.<bucket-region>.amazonaws.com/<bucket-name>[/<path>]` |
+| `CLOUD_ACCESS_KEY_ID` | Client Id for access Google Driver or AWS S3 service responsible to store backup data. | `AKIAYXGARMBIICAV23FE` |
+| `CLOUD_SECRET_ACCESS_KEY` | Client Secret for access Google Driver or S3 service responsible to store backup data. | `J/YXk2xMaJQugb+vYm+c/TbTz+LpMnkxucdfv/Rh` |
+| `RESTORE_TARGET` | Define the target used to restore the backup. example value: `LOCAL, GOOGLE_DRIVE, AWS`. | `AWS` |
+| `RETENTION_DATA` | Time the data remained stored. Default value (15 days): 15d | `15D` |
+
+
 ### 2.2 Building and Deploying the containers
 
 #### 2.2.1 Start containers
@@ -162,7 +207,6 @@ $ sudo ocariot stack backup
 
 - `--services <values>` - Defines a set of services from which you want to generate the backup. The delimiter for specifying one more service is space. For example: `sudo ocariot stack backup --services account iot-tracking`;
 - `--expression <values>` - Parameter used to define a crontab expression that will schedule the generation of a backup. The value of this option must be passed in double quotes. Example: `sudo ocariot stack backup --expression "0 3 * * *"`;
-- `--path <values>` - Parameter used to specify the path where the backup will be saved. If this option is omitted, the backup files will be placed at the place of execution of the command currently described.
 
 #### 2.2.4 Restore
 In order to restore all backups of the volumes present in the current path, the following interface is reserved:
@@ -176,7 +220,6 @@ $ sudo ocariot stack restore
 *Optional parameters:*
 
 - `--keys` - Specifies the location of the file containing the encryption keys and root token used by the vault. This file was generated at the first start of the OCARIoT stack using the command [`sudo ocariot stack start`](#3-Building-and-Deploying-the-containers). To restore only the cryptographic keys, the backup path must not have any backup files;
-- `--path` - Parameter used to specify the path where the backup files will be searched for restoring from a previous backup performed. If this option is omitted, the backup files will be searched at the place of execution of the command currently described;
 - `--services <values>` - Defines a set of services that will have their volumes restored. The delimiter for specifying one more service is space. For example: `sudo ocariot stack restore --services account iot-tracking`;
 - `--time` - You can restore from a particular backup by adding a time parameter to the command restore. For example, using restore `--time 3D `at the end in the above command will restore a backup from 3 days ago. See the [Duplicity manual](http://duplicity.nongnu.org/vers7/duplicity.1.html#toc8) to view the accepted time formats.
 
