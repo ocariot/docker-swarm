@@ -5,7 +5,7 @@ source ${INSTALL_PATH}/scripts/general_functions.sh
 
 clear_volumes()
 {
-    if [ $1 ]; then
+    if [ "$1" ]; then
         VOLUMES=$(docker volume ls \
             --format {{.Name}} \
             --filter "name=-$(echo $1 | sed 's/ /|-/g')")
@@ -73,7 +73,9 @@ if [ ! "$(docker stack ls | grep ${OCARIOT_STACK_NAME})" ]; then
   # volumes will be excluded
   if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
       clear_volumes "${SERVICES}"
-      sudo rm -rf ${INSTALL_PATH}/config/ocariot/vault/.keys
+      if [ "$(echo ${SERVICES} | grep -o ${BACKEND_VAULT})" ]; then
+        sudo rm -rf ${INSTALL_PATH}/config/ocariot/vault/.keys
+      fi
   fi
   exit
 fi
@@ -110,7 +112,9 @@ fi
 # volumes will be excluded
 if [ ${CHECK_CLEAR_VOLUMES_PARAMETER} ];then
     clear_volumes "${SERVICES}"
-    sudo rm -rf ${INSTALL_PATH}/config/ocariot/vault/.keys
+    if [ "$(echo ${SERVICES} | grep -o ${BACKEND_VAULT})" ]; then
+        sudo rm -rf ${INSTALL_PATH}/config/ocariot/vault/.keys
+    fi
 fi
 
 delete_network

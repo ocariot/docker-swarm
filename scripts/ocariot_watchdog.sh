@@ -4,20 +4,23 @@ OCARIOT_STACK_NAME="ocariot"
 
 check_vault()
 {
-    RESULT=$(docker service logs ${OCARIOT_STACK_NAME}_vault 2> /dev/null | grep -c "Token Generation Enabled")
-    echo ${RESULT}
+    VAULT_SERVICE_ID=$(docker stack ps ${OCARIOT_STACK_NAME} --format "{{.ID}}" --filter "name=${OCARIOT_STACK_NAME}_vault" --filter "desired-state=running")
+
+    if [ "${VAULT_SERVICE_ID}" ];then
+      TOKEN_LOG=$(docker service logs ${VAULT_SERVICE_ID} 2> /dev/null | grep -c "Token Generation Enabled")
+      if [ ${TOKEN_LOG} = 1 ];then
+        echo ${VAULT_SERVICE_ID}
+      fi
+    fi
 }
 
 execute_script()
 {
-
-    RET=$(check_vault)
-    while [[ ${RET} != 1 ]];
+    STACK_ID=""
+    while [[ -z "${STACK_ID}" ]];
     do
-        RET=$(check_vault)
+        STACK_ID=$(check_vault 2> /dev/null)
     done
-
-    STACK_ID=$(docker stack ps ${OCARIOT_STACK_NAME} --format "{{.ID}}" --filter "name=${OCARIOT_STACK_NAME}_vault" --filter "desired-state=running")
 
     CONTAINER_ID=$(docker ps --format {{.ID}} --filter "name=${STACK_ID}")
     echo "Executando script $2 para: $1"

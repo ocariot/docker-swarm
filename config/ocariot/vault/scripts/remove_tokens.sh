@@ -18,7 +18,7 @@ then
         | tail -n +12 | grep -vw ${SERVICE_NAME} \
         | tr -s ' ' | tr ' ' '=')
 
-    if [ -z "${UPDATE_ACCESSORS}" ];then
+    if [ -z "$(echo "${UPDATE_ACCESSORS}" | grep -vwE "bkp_realized")" ];then
       vault kv metadata delete secret/map-accessor-token
     else
       vault kv put secret/map-accessor-token/ ${UPDATE_ACCESSORS}

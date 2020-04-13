@@ -37,12 +37,11 @@ remove_volumes()
     done
 }
 
-validate_file_path()
-{
-  ls $1 &> /dev/null
-  if [ $? != 0 ]; then
-    echo "Path $1 not found!"
-  fi
+validate_file_path() {
+	ls $1 &>/dev/null
+	if [ $? != 0 ] || [ -z "$1" ]; then
+		echo "Path $1 not found!"
+	fi
 }
 
 registre_bkp_vault()
@@ -50,9 +49,8 @@ registre_bkp_vault()
     STACK_ID=$(docker stack ps ${OCARIOT_STACK_NAME} --format "{{.ID}}" --filter "name=${OCARIOT_STACK_NAME}_vault" --filter "desired-state=running")
     CONTAINER_ID=$(docker ps --format {{.ID}} --filter "name=${STACK_ID}")
     echo "Executando script $2 para: $1"
-    docker exec -t ${CONTAINER_ID} vault kv put secret/map-accessor-token bkp_realized=true
+    docker exec -t ${CONTAINER_ID} vault kv patch secret/map-accessor-token bkp_realized=true
 }
-
 
 BACKEND_VAULT="consul"
 
@@ -143,7 +141,7 @@ VOLUMES_BKP=""
 RUNNING_SERVICES=""
 
 OCARIOT_VOLUMES=$(cat ${INSTALL_PATH}/docker-ocariot-stack.yml | grep -P "name: ocariot.*data" | sed 's/\(name:\| \)//g')
-EXPRESSION_GREP=$(echo "${OCARIOT_VOLUMES}" | sed 's/ /|/g')
+EXPRESSION_GREP=$(echo ${OCARIOT_VOLUMES} | sed 's/ /|/g')
 
 # Verifying if backup folder exist
 if [ "$1" = "restore" ];
