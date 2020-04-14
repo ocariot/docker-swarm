@@ -127,7 +127,7 @@ Variables responsible for defining backup settings. The variables with prefix `C
 In order for backup and restore operations to be successful, credentials must be granted permissions to manipulate the cloud storage location:
     
 - [Google Drive](https://console.developers.google.com/apis/credentials)
-When performing the first backup, a link will be provided that redirects the browser to a user's authentication screen at Google, thus granting permission to manipulate Google Drive. In future `backup` or `restore` operations, authentication is not required unless the `google_credentials` volume is removed
+When performing the first backup, a link will be provided that redirects the browser to a user's authentication screen at Google, thus granting permission to manipulate Google Drive. In future `backup` or `restore` operations, authentication is not required unless the `google_credentials` volume is removed.
 
 - [AWS S3](https://docs.aws.amazon.com/pt_br/sdk-for-java/v1/developer-guide/signup-create-iam-user.html)
 To use the `backup` or` restore` operations, it is necessary to associate the following policy with the created user:
@@ -162,7 +162,7 @@ To use the `backup` or` restore` operations, it is necessary to associate the fo
 | `CLOUD_ACCESS_KEY_ID` | Client Id for access Google Driver or AWS S3 service responsible to store backup data. | `AKIAYXGARMBIICAV23FE` |
 | `CLOUD_SECRET_ACCESS_KEY` | Client Secret for access Google Driver or S3 service responsible to store backup data. | `J/YXk2xMaJQugb+vYm+c/TbTz+LpMnkxucdfv/Rh` |
 | `RESTORE_TARGET` | Define the target used to restore the backup. example value: `LOCAL, GOOGLE_DRIVE, AWS`. | `AWS` |
-| `RETENTION_DATA` | Time the data remained stored. Default value (15 days): 15d | `15D` |
+| `BACKUP_DATA_RETENTION` | Time the data backup will remain stored. Default value (15 days): `15D`. | `15D` |
 
 
 ### 2.2 Building and Deploying the containers
@@ -269,7 +269,7 @@ Variables to define the administrator user's credentials the first time the Graf
 
 | Variable | Description | Example |
 | -------- | ----------- | ------- |
-| `RETENTION_DATA` | Time the data remained stored. | `15d` - corresponds to 15 days |
+| `DATA_RETENTION` | Time the data remained stored in database. | `15d` - corresponds to 15 days |
 
 ### 3.2 Building and Deploying the containers
 
@@ -309,7 +309,6 @@ $ sudo ocariot monitor backup
 
 - `--services <values>` - Defines a set of services from which you want to generate the backup. The delimiter for specifying one more service is space. For example: `sudo ocariot monitor backup --services grafana prometheus`;
 - `--expression <values>` - Parameter used to define a crontab expression that will schedule the generation of a backup. The value of this option must be passed in double quotes. Example: `sudo ocariot monitor backup --expression "0 3 * * *"`;
-- `--path <values>` - Parameter used to specify the path where the backup will be saved. If this option is omitted, the backup files will be placed at the place of execution of the command currently described.
 
 #### 3.2.4 Restore
 In order to restore all backups of the volumes present in the current path, the following interface is reserved:
@@ -322,7 +321,6 @@ $ sudo ocariot monitor restore
 
 *Optional parameters:*
 
-- `--path` - Parameter used to specify the path where the backup files will be searched for restoring from a previous backup performed. If this option is omitted, the backup files will be searched at the place of execution of the command currently described;
 - `--services <values>` - Defines a set of services that will have their volumes restored. The delimiter for specifying one more service is space. For example: `sudo ocariot monitor restore --services grafana prometheus`;
 - `--time` - You can restore from a particular backup by adding a time parameter to the command restore. For example, using restore `--time 3D `at the end in the above command will restore a backup from 3 days ago. See the [Duplicity manual](http://duplicity.nongnu.org/vers7/duplicity.1.html#toc8) to view the accepted time formats.
 

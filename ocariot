@@ -103,6 +103,7 @@ case $1 in
 		stack_options $(echo $@ | sed "s/$1 //g")
 		;;
   monitor)
+  	EXPRESSION_BKP="$(echo "$@" | grep -o -P '(?<=--expression ).*' | sed 's/--.*//g')"
     monitor_options $(echo $@ | sed "s/$1 //g")
 		;;
   version)
