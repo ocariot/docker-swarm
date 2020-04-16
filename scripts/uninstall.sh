@@ -56,6 +56,7 @@ sudo rm -f /usr/local/bin/ocariot
 ( crontab -u ${USER} -l | sed "/${MONITOR_BKP_COMMAND}/d"; ) | crontab -u ${USER} -
 sudo rm -fR ${INSTALL_PATH}
 sudo rm -f /tmp/ocariot_watchdog.log /tmp/ocariot_backup.log
+sudo rm -rf /tmp/cache-ocariot*
 
 stop_watchdog
 
