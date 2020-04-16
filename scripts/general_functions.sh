@@ -12,6 +12,8 @@ ENV_MONITOR=".env.monitor"
 NETWORK_NAME="ocariot"
 BACKUP_CONTAINER_NAME="volumerize"
 CLOUD_TARGET=$(echo ${CLOUD_TARGET} | sed 's/\/$//g')
+OCARIOT_CREDS_DRIVER="ocariot-credentials-data"
+MONITOR_CREDS_DRIVER="ocariot-monitor-credentials-data"
 
 ###########################################################################################################
 ###########################################  GENERAL FUNCTIONS ############################################
@@ -144,20 +146,17 @@ services responsible for monitoring the health of containers.\
       \n \t\t \e[7mstop\e[27m: command used to \e[33mstop\e[0m the stack of services responsible for monitoring \
 the health of containers.
       \n \t\t \e[7mbackup\e[27m: backs up all services in the ocariot_monitor stack. If you want to make back up a specific set \
-of services, use the \e[4m--services\e[0m option. If the \e[4m--path\e[0m option is not set, the backup will be  \
-saved to the current location. It is also possible to schedule the backup by passing a crontab expression in the \
+of services, use the \e[4m--services\e[0m option. It is also possible to schedule the backup by passing a crontab \
+expression in the \
 value of the \e[4m--expression\e[0m option. \
 			\n \t\t \e[7mrestore\e[27m: restore all services in the ocariot_monitor stack. If you want to restore a specific set of \
-services, use the \e[4m--services\e[0m option. If the \e[4m--path\e[0m option is not set, the restore command \
-will search for backup files in the current location. \
+services, use the \e[4m--services\e[0m option. \
     \n\t\e[1m<option>\e[0m: \n \t\t \e[7m--services <[values>\e[27m: define a set of services passed to a command. \
 			\n \t\t \e[7m--clear-volumes\e[27m: parameter used to clear all volumes used by monitor. \
 			\n \t\t \e[7m--time <value>\e[27m: You can restore from a particular backup by adding a time parameter to the \
 command restore. For example, using restore --time 3D at the end in the above command will restore a backup from \
 3 days ago. See the Duplicity manual to view the accepted time formats \
 (http://duplicity.nongnu.org/vers7/duplicity.1.html#toc8). \
-			\n \t\t \e[7m--path <value>\e[27m: parameter used to specify the path where the backup will be saved or where \
-the backup files will be searched for restoring from a previous backup performed. \
 			\n \t\t \e[7m--expression <value>\e[27m: parameter used to define a crontab expression that will be performed \
 hen scheduling the back up. The value of this option must be passed in double quotes. Example: sudo ocariot \
 monitor backup --expression \"0 3 * * *\""
@@ -207,14 +206,14 @@ validate_file_path() {
 
 cloud_bkps() {
 	docker run -t $1 --rm --name ${BACKUP_CONTAINER_NAME} \
-		-v google_credentials:/credentials \
+		-v $2:/credentials \
 		-e "VOLUMERIZE_SOURCE=/source" \
 		-e "VOLUMERIZE_TARGET=${CLOUD_TARGET}" \
 		-e "GOOGLE_DRIVE_ID=${CLOUD_ACCESS_KEY_ID}" \
 		-e "GOOGLE_DRIVE_SECRET=${CLOUD_SECRET_ACCESS_KEY}" \
 		-e "AWS_ACCESS_KEY_ID=${CLOUD_ACCESS_KEY_ID}" \
 		-e "AWS_SECRET_ACCESS_KEY=${CLOUD_SECRET_ACCESS_KEY}" \
-		blacklabelops/volumerize "${@:2}"
+		blacklabelops/volumerize "${@:3}"
 }
 
 validate_bkp_target() {
@@ -272,9 +271,9 @@ check_backup_target_config() {
 			exit
 		fi
 		CREDS_FILE_NAME="googledrive.cred"
-		CREDS_FILE="$(cloud_bkps "" find /credentials -name ${CREDS_FILE_NAME})"
+		CREDS_FILE="$(cloud_bkps "" $1 find /credentials -name ${CREDS_FILE_NAME})"
 		if [ -z "$(echo ${CREDS_FILE} | grep ${CREDS_FILE_NAME})" ]; then
-			cloud_bkps "-i" list
+			cloud_bkps "-i" $1 list
 		fi
 	fi
 
@@ -328,9 +327,4 @@ EOF
 backup_container_operation()
 {
 	docker container "$1" "${BACKUP_CONTAINER_NAME}" > /dev/null
-}
-
-remove_backup_container()
-{
-	backup_container_operation stop && backup_container_operation rm
 }

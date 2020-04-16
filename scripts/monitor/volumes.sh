@@ -3,10 +3,9 @@
 INSTALL_PATH="/opt/ocariot-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
 
-set_variables_environment "${ENV_OCARIOT}"
 set_variables_environment "${ENV_MONITOR}"
 
-remove_backup_container &> /dev/null
+backup_container_operation stop &> /dev/null
 
 VALIDATING_OPTS=$(echo "$@" | sed 's/ /\n/g' |
 	grep -P "(\-\-services|\-\-time|\-\-expression|\-\-keys).*" -v | grep '\-\-')
@@ -35,7 +34,7 @@ if ([ $1 = "backup" ] && [ ${CHECK_TIME_OPT} ]) ||
 	monitor_help
 fi
 
-check_backup_target_config
+check_backup_target_config "${MONITOR_CREDS_DRIVER}"
 
 if [ ${RESTORE_TIME} ]; then
 	RESTORE_TIME="--time ${RESTORE_TIME}"
@@ -117,7 +116,7 @@ if [ -z "${SERVICES}" ]; then
 			grep -oE "${EXPRESSION_GREP}" |
 			sed 's/\(ocariot-monitor-\|-data\)//g')
 	elif [ "$1" = "restore" ] && [ "${RESTORE_TARGET}" != "LOCAL" ]; then
-		SERVICES=$(cloud_bkps "" ${VOLUME_COMMAND} |
+		SERVICES=$(cloud_bkps "" "${MONITOR_CREDS_DRIVER}" ${VOLUME_COMMAND} |
 			grep -oE "${EXPRESSION_GREP}" |
 			sed 's/\(ocariot-monitor-\|-data\)//g')
 	else
@@ -142,7 +141,7 @@ for SERVICE in ${SERVICES}; do
 			grep -w ${SERVICE})
 	elif [ "$1" = "restore" ] && [ "${RESTORE_TARGET}" != "LOCAL" ]; then
 		if [ -z "${CLOUD_BACKUPS}" ];then
-			CLOUD_BACKUPS=$(cloud_bkps "" ${VOLUME_COMMAND})
+			CLOUD_BACKUPS=$(cloud_bkps "" "${MONITOR_CREDS_DRIVER}" ${VOLUME_COMMAND})
 		fi
 		MESSAGE="Volume BKP ${SERVICE} not found!"
 		VOLUME_NAME="$(echo ${CLOUD_BACKUPS} |
@@ -179,17 +178,19 @@ fi
 INCREMENT=1
 for VOLUME in ${VOLUMES_BKP}; do
 	VOLUMES="${VOLUMES} -v ${VOLUME}:/source/${VOLUME}${SOURCE_VOLUME_PROPERTY}"
+	VOLUMES_CACHE="${VOLUMES_CACHE} -v /tmp/cache-ocariot-monitor/${VOLUME}:/volumerize-cache/${VOLUME}"
 	INCREMENT=$((INCREMENT + 1))
 done
 
 PROCESS_BKP="OK"
 BKP_CONFIG_MODEL=$(mktemp --suffix=.json)
 
-docker run -d \
+docker run -d --rm \
 	--name ${BACKUP_CONTAINER_NAME} \
 	${VOLUMES} \
+	${VOLUMES_CACHE} \
 	-v ${LOCAL_TARGET}:/local-backup${BACKUP_VOLUME_PROPERTY} \
-	-v google_credentials:/credentials \
+	-v ${MONITOR_CREDS_DRIVER}:/credentials \
 	-v ${BKP_CONFIG_MODEL}:/etc/volumerize/multiconfig.json:rw \
 	blacklabelops/volumerize &> /dev/null
 
@@ -221,12 +222,12 @@ for VOLUME in ${VOLUMES_BKP}; do
 	if [ $? != 0 ]; then
 		PROCESS_BKP=FALSE
 		echo "Error during $1 operation"
-		break
+		exit 1
 	fi
 	INCREMENT=$((INCREMENT + 1))
 done
 
-remove_backup_container
+backup_container_operation stop
 
 if [ "${PROCESS_BKP}" = "OK" ]; then
 	RUNNING_SERVICES=$(echo ${RUNNING_SERVICES} | sed 's/ //g')
