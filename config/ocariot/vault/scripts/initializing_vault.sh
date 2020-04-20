@@ -474,8 +474,8 @@ main()
     # credentials and active the RabbitMQ plugin.
     configure_rabbitmq_plugin
 
-    echo "Stack initialized successfully!!! :)"
-    wget -qO - https://pastebin.com/raw/jNnscFJX
+		wget -qO - https://pastebin.com/raw/jNnscFJX
+    echo -e "\nStack initialized successfully!!! :)"
 }
 
 # Function to check if Consul was initialized

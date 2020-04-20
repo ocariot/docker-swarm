@@ -74,7 +74,7 @@ sudo git -C ${INSTALL_PATH} checkout "tags/${TARGET}" &> /dev/null
 
 if [ ${TARGET} = $(git -C ${INSTALL_PATH} describe --tags --abbrev=0) ];then
   if [ "${ACTUAL_VERSION}" != ${TARGET} ];then
-    stop_watchdog
+    stop_process "ocariot_watchdog.sh"
     start_watchdog
   fi
   update_env ${ENV_OCARIOT}

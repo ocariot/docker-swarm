@@ -1,0 +1,163 @@
+[{
+	"message_type": "notification:child",
+	"en": {
+		"title": "We miss you.",
+		"body": "You have not logged into OCARIoT Game APP in the last %d days!"
+	},
+	"pt": {
+		"title": "Sentimos a sua falta.",
+		"body": "Você não tem entrado no aplicativo do OCARIoT há %d dias!"
+	},
+	"es": {
+		"title": "Te echamos de menos.",
+		"body": "¡No has iniciado sesión en la aplicación del juego OCARIoT en los últimos %d días!"
+	},
+	"el": {
+		"title": "Μας λείπεις.",
+		"body": "Δεν έχετε συνδεθεί στο APP OCARIoT Game τις τελευταίες %d ημέρες!"
+	}
+}, {
+	"message_type": "notification:family",
+	"en": {
+		"title": "We miss you.",
+		"body": "You have not logged  into OCARIoT platform in the last %d days!"
+	},
+	"pt": {
+		"title": "Sentimos sua falta.",
+		"body": "Você não fez login na plataforma OCARIoT nos últimos %d dias!"
+	},
+	"es": {
+		"title": "Te echamos de menos.",
+		"body": "¡No has iniciado sesión en la plataforma OCARIoT en los últimos %d días!"
+	},
+	"el": {
+		"title": "Μας λείπεις.",
+		"body": "Δεν έχετε συνδεθεί στην πλατφόρμα OCARIoT τις τελευταίες %d ημέρες!"
+	}
+}, {
+	"message_type": "notification:teacher",
+	"en": {
+		"title": "We miss you.",
+		"body": "You have not logged  into OCARIoT platform in the last %d days!"
+	},
+	"pt": {
+		"title": "Sentimos sua falta.",
+		"body": "Você não fez login na plataforma OCARIoT nos últimos %d dias!\t"
+	},
+	"es": {
+		"title": "Te echamos de menos.",
+		"body": "¡No has iniciado sesión en la plataforma OCARIoT en los últimos %d días!"
+	},
+	"el": {
+		"title": "Μας λείπεις.",
+		"body": "Δεν έχετε συνδεθεί στην πλατφόρμα OCARIoT τις τελευταίες %d ημέρες!"
+	}
+}, {
+	"message_type": "notification:child_teacher",
+	"en": {
+		"title": "Child not using OCARIoT Game APP.",
+		"body": "%s did not log  into OCARIoT Game APP in the last %d days!"
+	},
+	"pt": {
+		"title": "A criança não está usando o aplicativo do OCARIoT.",
+		"body": "%s não fez login no aplicativo do OCARIoT nos últimos %d dias!"
+	},
+	"es": {
+		"title": "El niño no está usando la aplicación del juego OCARIoT.",
+		"body": "¡%s no inició sesión en la aplicación OCARIoT en los últimos %d días!"
+	},
+	"el": {
+		"title": "Το παιδί δεν χρησιμοποιεί την εφαρμογή OCARIoT APP.",
+		"body": "Ο χρήστης %s δεν μπήκε στο APP OCARIoT Game τις τελευταίες %d ημέρες!"
+	}
+}, {
+	"message_type": "notification:child_family",
+	"en": {
+		"title": "Child not using OCARIoT Game APP.",
+		"body": "%s did not log into OCARIoT Game APP in the last %d days!"
+	},
+	"pt": {
+		"title": "A criança não está usando o aplicativo do OCARIoT.",
+		"body": "%s não entrou no aplicativo do OCARIoT nos últimos %d dias!"
+	},
+	"es": {
+		"title": "Niño que no usa la aplicación de juego OCARIoT.",
+		"body": "¡%s no inició sesión en la aplicación OCARIoT en los últimos %d días!"
+	},
+	"el": {
+		"title": "Το παιδί δεν χρησιμοποιεί την εφαρμογή OCARIoT APP.",
+		"body": "Ο χρήστης %s δεν μπήκε στο APP OCARIoT Game τις τελευταίες %d ημέρες!"
+	}
+}, {
+	"message_type": "mission:new",
+	"en": {
+		"title": "New mission!",
+		"body": "You have a new mission available."
+	},
+	"pt": {
+		"title": "Nova missão!",
+		"body": "Você tem uma nova missão disponível."
+	},
+	"es": {
+		"title": "¡Nueva misión!",
+		"body": "Tienes una nueva misión disponible."
+	},
+	"el": {
+		"title": "Νέα αποστολή!",
+		"body": "Έχετε διαθέσιμη μια νέα αποστολή."
+	}
+}, {
+	"message_type": "mission:done",
+	"en": {
+		"title": "Mission accomplished.",
+		"body": "Well done! You have completed a mission."
+	},
+	"pt": {
+		"title": "Missão cumprida.",
+		"body": "Muito bem! Você completou uma missão."
+	},
+	"es": {
+		"title": "Misión cumplida.",
+		"body": "¡Bien hecho! Has completado una misión"
+	},
+	"el": {
+		"title": "Αποστολή εξετελέσθει.",
+		"body": "Μπράβο! Έχετε ολοκληρώσει μια αποστολή."
+	}
+}, {
+	"message_type": "monitoring:miss_child_data",
+	"en": {
+		"title": "No new data.",
+		"body": "OCARIoT has not received new data from %s in the last %d days!"
+	},
+	"pt": {
+		"title": "Sem novos dados.",
+		"body": "OCARIoT não recebeu novos dados de %s nos últimos %d dias!"
+	},
+	"es": {
+		"title": "No hay nuevos datos.",
+		"body": "¡OCARIoT no ha recibido nuevos datos de %s en los últimos %d días!"
+	},
+	"el": {
+		"title": "Ο αισθητήρας σταμάτησε να στέλνει δεδομένα.",
+		"body": "Το OCARIoT δεν έχει λάβει νέα δεδομένα από τον χρήστη %s τις τελευταίες ημέρες %d!"
+	}
+}, {
+	"message_type": "iot:miss_data",
+	"en": {
+		"title": "Sensor stopped sending data.",
+		"body": "%s sensor deployed in %s, %s didn't send data in the last %d days."
+	},
+	"pt": {
+		"title": "O sensor parou de enviar dados.",
+		"body": "O sensor %s colocado em %s, %s não enviou dados nos últimos %d dias."
+	},
+	"es": {
+		"title": "El sensor dejó de enviar datos.",
+		"body": "El sensor %s implementado en %s, %s no envió datos en los últimos %d días."
+	},
+	"el": {
+		"title": "Ο αισθητήρας σταμάτησε να στέλνει δεδομένα.",
+		"body": "Ο αισθητήρας %s που αναπτύχθηκε στη θέση %s, %s δεν έστειλε δεδομένα τις τελευταίες X ημέρες."
+	}
+}]
