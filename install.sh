@@ -4,7 +4,7 @@ INSTALL_PATH="/opt/ocariot-swarm"
 
 version()
 {
-  echo "1.5.0"
+  echo "1.5.1"
 }
 
 isInstalled()

@@ -793,13 +793,19 @@ services:
       - PORT_HTTPS=10001
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/keys/firebase_keyfile.json
       - RABBITMQ_SSL=true
+      - MESSAGES_PATH=/etc/keys/messages.json
     volumes:
-      - ${FIREBASE_KEYFILE_PATH}:/etc/keys/firebase_keyfile.json:ro
       - type: bind
         source: ./config/ocariot/vault/.tokens/access-token-notification-service
         target: /tmp/access-token-notification-service
     entrypoint: initializing_service.sh
     configs:
+      - source: ocariot-messages-notification-config
+        target: /etc/keys/messages.json
+        mode: 0400
+      - source: ocariot-firebase-notification-config
+        target: /etc/keys/firebase_keyfile.json
+        mode: 0400
       - source: ocariot-init-service-config
         target: /usr/bin/initializing_service.sh
         mode: 0100
@@ -951,6 +957,10 @@ configs:
     file: config/ocariot/psmysql/scripts/initializing_psmysql.sh
   ocariot-init-api-gateway-config:
     file: config/ocariot/api-gateway/scripts/initializing_api_gateway.sh
+  ocariot-messages-notification-config:
+    file: config/ocariot/notification/messages.json
+  ocariot-firebase-notification-config:
+    file: ${FIREBASE_KEYFILE_PATH}
 
 volumes:
   psmdb-account-data:

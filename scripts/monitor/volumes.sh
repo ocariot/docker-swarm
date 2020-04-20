@@ -178,7 +178,7 @@ fi
 INCREMENT=1
 for VOLUME in ${VOLUMES_BKP}; do
 	VOLUMES="${VOLUMES} -v ${VOLUME}:/source/${VOLUME}${SOURCE_VOLUME_PROPERTY}"
-	VOLUMES_CACHE="${VOLUMES_CACHE} -v /tmp/cache-ocariot-monitor/${VOLUME}:/volumerize-cache/${VOLUME}"
+	VOLUMES_CACHE="${VOLUMES_CACHE} -v cache-${VOLUME}:/volumerize-cache/${VOLUME}"
 	INCREMENT=$((INCREMENT + 1))
 done
 
@@ -211,6 +211,7 @@ for VOLUME in ${VOLUMES_BKP}; do
 	echo "======Backup of ${VOLUME} volume======"
 
 	docker exec -t \
+		-e VOLUMERIZE_CACHE=/volumerize-cache/${VOLUME} \
 		-e VOLUMERIZE_SOURCE=/source/${VOLUME} \
 		-e VOLUMERIZE_TARGET="multi:///etc/volumerize/multiconfig.json?mode=mirror&onfail=abort" \
 		-e GOOGLE_DRIVE_ID=${CLOUD_ACCESS_KEY_ID} \

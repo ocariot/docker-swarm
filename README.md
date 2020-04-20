@@ -44,11 +44,11 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.0/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.1/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.0/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.1/install.sh | sudo bash
 ```
 
 
@@ -175,7 +175,7 @@ To execute all the necessary commands to lift the entire stack of containers use
 $ sudo ocariot stack start
 ```
 
-Lifting all containers may take a few seconds or a few minutes. When the entire stack has been successfully initialized, you will see the following message on the terminal: `Stack initialized successfully!!! :)` followed by the OCARIoT logo.
+Lifting all containers may take a few seconds or a few minutes. When the entire stack has been successfully initialized, you will see the OCARIoT logo followed by the following message on the terminal: `Stack initialized successfully!!! :)` 
 
 > :warning: **During the first boot, the encryption keys and root access token will be generated. This content will be made available in the *keys* file, which will be generated at the place of execution of the command currently described. This file is of fundamental importance for the restoration of backups.**
 >
