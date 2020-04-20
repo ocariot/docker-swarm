@@ -24,12 +24,9 @@ start_watchdog()
   ${INSTALL_PATH}/scripts/ocariot_watchdog.sh >> /tmp/ocariot_watchdog.log &
 }
 
-stop_watchdog()
+stop_process()
 {
-  ps aux \
-    | grep -w ocariot_watchdog.sh \
-    | sed '/grep/d' \
-    | awk '{system("kill -9 "$2)}'
+	pgrep -f "$1" | xargs kill -9
 }
 
 create_network()

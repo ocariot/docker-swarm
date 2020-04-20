@@ -3,6 +3,16 @@
 INSTALL_PATH="/opt/ocariot-swarm"
 source ${INSTALL_PATH}/scripts/general_functions.sh
 
+stop_log()
+{
+		COMMAND="docker service logs ocariot_vault"
+    while [[ -z "$( ${COMMAND} 2> /dev/null | grep -ow 'Stack initialized successfully')" ]]; do
+        sleep 1
+    done
+
+    stop_process "${COMMAND}"
+}
+
 # General function for setting up the environment
 # before starting services
 configure_environment()
@@ -84,10 +94,11 @@ fi
 
 GENERATE_KEYS_FILE="FALSE"
 
-docker stack ps ${OCARIOT_STACK_NAME} > /dev/null 2>&1
-STATUS_OCARIOT_STACK=$?
+STATUS_OCARIOT_STACK=$(docker stack ls --format {{.Name}} | grep -w ${OCARIOT_STACK_NAME})
 
-if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
+if [ -z "${STATUS_OCARIOT_STACK}" ]; then
+		docker stack rm ${OCARIOT_STACK_NAME} &> /dev/null
+
     # General function for setting up the environment
     # before starting services
     configure_environment
@@ -118,9 +129,10 @@ create_network
 # Executing the services in mode swarm defined in docker-compose.yml file
 docker stack deploy -c ${INSTALL_PATH}/docker-ocariot-stack.yml ${OCARIOT_STACK_NAME} --resolve-image changed
 
-if [ "${STATUS_OCARIOT_STACK}" -ne 0 ]; then
+if [ -z "${STATUS_OCARIOT_STACK}" ]; then
     validate_keys "${GENERATE_KEYS_FILE}" &
     waiting_vault
     # Monitoring Vault service
-    docker service logs ${OCARIOT_STACK_NAME}_vault -f 2> /dev/null
+    docker service logs ${OCARIOT_STACK_NAME}_vault -f 2> /dev/null &
+    stop_log
 fi

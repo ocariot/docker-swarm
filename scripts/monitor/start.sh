@@ -8,10 +8,15 @@ if [ "$#" -ne 0 ]; then
     exit
 fi
 
-if [ -z "$(docker stack ls | grep -w ${OCARIOT_STACK_NAME})" ];
+if [ -z "$(docker stack ls --format {{.Name}} | grep -w ${OCARIOT_STACK_NAME})" ];
 then
   echo "It is necessary to initialize the ocariot services stack" \
     "(sudo ocariot stack start) to make the Monitor accessible in the browser."
+fi
+
+if [ -z "$(docker stack ls --format {{.Name}} | grep -w ${MONITOR_STACK_NAME})" ];
+then
+	docker stack rm ${MONITOR_STACK_NAME} &> /dev/null
 fi
 
 create_network
