@@ -10,7 +10,8 @@ MONITOR_STACK_NAME="ocariot_monitor"
 ENV_OCARIOT=".env"
 ENV_MONITOR=".env.monitor"
 NETWORK_NAME="ocariot"
-BACKUP_CONTAINER_NAME="volumerize"
+OCARIOT_BACKUP_CONTAINER="${OCARIOT_STACK_NAME}_volumerize"
+MONITOR_BACKUP_CONTAINER="${MONITOR_STACK_NAME}_volumerize"
 CLOUD_TARGET=$(echo ${CLOUD_TARGET} | sed 's/\/$//g')
 OCARIOT_CREDS_DRIVER="ocariot-credentials-data"
 MONITOR_CREDS_DRIVER="ocariot-monitor-credentials-data"
@@ -26,7 +27,10 @@ start_watchdog()
 
 stop_process()
 {
-	pgrep -f "$1" | xargs kill -9
+	PID=$(pgrep -f "$1")
+	if [ "${PID}" ]; then
+		kill -SIGINT ${PID}
+	fi
 }
 
 create_network()
@@ -202,15 +206,15 @@ validate_file_path() {
 }
 
 cloud_bkps() {
-	docker run -t $1 --rm --name ${BACKUP_CONTAINER_NAME} \
-		-v $2:/credentials \
+	docker run -t $1 --rm --name $2 \
+		-v $3:/credentials \
 		-e "VOLUMERIZE_SOURCE=/source" \
 		-e "VOLUMERIZE_TARGET=${CLOUD_TARGET}" \
 		-e "GOOGLE_DRIVE_ID=${CLOUD_ACCESS_KEY_ID}" \
 		-e "GOOGLE_DRIVE_SECRET=${CLOUD_SECRET_ACCESS_KEY}" \
 		-e "AWS_ACCESS_KEY_ID=${CLOUD_ACCESS_KEY_ID}" \
 		-e "AWS_SECRET_ACCESS_KEY=${CLOUD_SECRET_ACCESS_KEY}" \
-		blacklabelops/volumerize "${@:3}"
+		blacklabelops/volumerize "${@:4}"
 }
 
 validate_bkp_target() {
@@ -268,9 +272,9 @@ check_backup_target_config() {
 			exit
 		fi
 		CREDS_FILE_NAME="googledrive.cred"
-		CREDS_FILE="$(cloud_bkps "" $1 find /credentials -name ${CREDS_FILE_NAME})"
+		CREDS_FILE="$(cloud_bkps "" $1 $2 find /credentials -name ${CREDS_FILE_NAME})"
 		if [ -z "$(echo ${CREDS_FILE} | grep ${CREDS_FILE_NAME})" ]; then
-			cloud_bkps "-i" $1 list
+			cloud_bkps "-i" $1 $2 list
 		fi
 	fi
 
@@ -323,5 +327,5 @@ EOF
 
 backup_container_operation()
 {
-	docker container "$1" "${BACKUP_CONTAINER_NAME}" > /dev/null
+	docker container "$1" "$2" > /dev/null
 }
