@@ -129,10 +129,14 @@ create_network
 # Executing the services in mode swarm defined in docker-compose.yml file
 docker stack deploy -c ${INSTALL_PATH}/docker-ocariot-stack.yml ${OCARIOT_STACK_NAME} --resolve-image changed
 
+if [ $? != 0 ]; then
+	exit
+fi
+
 if [ -z "${STATUS_OCARIOT_STACK}" ]; then
     validate_keys "${GENERATE_KEYS_FILE}" &
     waiting_vault
     # Monitoring Vault service
-    docker service logs ${OCARIOT_STACK_NAME}_vault -f 2> /dev/null &
-    stop_log
+    stop_log &
+		docker service logs ${OCARIOT_STACK_NAME}_vault -f 2> /dev/null
 fi

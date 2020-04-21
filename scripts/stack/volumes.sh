@@ -12,8 +12,6 @@ registre_bkp_vault() {
 
 set_variables_environment "${ENV_OCARIOT}"
 
-backup_container_operation stop &> /dev/null
-
 BACKEND_VAULT="consul"
 
 VALIDATING_OPTS=$(echo "$@" | sed 's/ /\n/g' |
@@ -42,12 +40,20 @@ if ([ "$1" != "backup" ] && [ "$1" != "restore" ]) ||
 	stack_help
 fi
 
+if [ "$(pgrep -f "$0 backup" | wc -l)" -gt "2" ] \
+	|| [ "$(pgrep -f "$0 restore" | wc -l)" -gt "2" ]; then
+	echo "A backup or restore operation is being performed. Please wait for completion to initialize this operation."
+	exit
+fi
+
+backup_container_operation stop "${OCARIOT_BACKUP_CONTAINER}" &> /dev/null
+
 if ([ $1 = "backup" ] && [ ${CHECK_TIME_OPT} ]) ||
 	([ $1 = "restore" ] && [ ${CHECK_AUTO_BKP_OPT} ]); then
 	stack_help
 fi
 
-check_backup_target_config "${OCARIOT_CREDS_DRIVER}"
+check_backup_target_config "${OCARIOT_BACKUP_CONTAINER}" "${OCARIOT_CREDS_DRIVER}"
 
 if [ ${RESTORE_TIME} ]; then
 	RESTORE_TIME="--time ${RESTORE_TIME}"
@@ -132,7 +138,7 @@ if [ -z "${SERVICES}" ]; then
 			grep -oE "${EXPRESSION_GREP}" |
 			sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
 	elif [ "$1" = "restore" ] && [ "${RESTORE_TARGET}" != "LOCAL" ]; then
-		SERVICES=$(cloud_bkps "" "${OCARIOT_CREDS_DRIVER}" ${VOLUME_COMMAND} |
+		SERVICES=$(cloud_bkps "" "${OCARIOT_BACKUP_CONTAINER}" "${OCARIOT_CREDS_DRIVER}" ${VOLUME_COMMAND} |
 			grep -oE "${EXPRESSION_GREP}" |
 			sed 's/\(psmdb-\|psmysql-\|ocariot-\|-data\|redis-\)//g')
 	else
@@ -155,7 +161,7 @@ for SERVICE in ${SERVICES}; do
 			grep -w ${SERVICE})
 	elif [ "$1" = "restore" ] && [ "${RESTORE_TARGET}" != "LOCAL" ]; then
 		if [ -z "${CLOUD_BACKUPS}" ];then
-			CLOUD_BACKUPS=$(cloud_bkps "" "${OCARIOT_CREDS_DRIVER}" ${VOLUME_COMMAND})
+			CLOUD_BACKUPS=$(cloud_bkps "" "${OCARIOT_BACKUP_CONTAINER}" "${OCARIOT_CREDS_DRIVER}" ${VOLUME_COMMAND})
 		fi
 		MESSAGE="Volume BKP ${SERVICE} not found!"
 		VOLUME_NAME="$(echo ${CLOUD_BACKUPS} |
@@ -205,7 +211,7 @@ PROCESS_BKP="OK"
 BKP_CONFIG_MODEL=$(mktemp --suffix=.json)
 
 docker run -d --rm \
-	--name ${BACKUP_CONTAINER_NAME} \
+	--name ${OCARIOT_BACKUP_CONTAINER} \
 	${VOLUMES} \
 	${VOLUMES_CACHE} \
 	-v ${LOCAL_TARGET}:/local-backup${BACKUP_VOLUME_PROPERTY} \
@@ -225,7 +231,7 @@ for VOLUME in ${VOLUMES_BKP}; do
 		restore_config "${BKP_CONFIG_MODEL}" "${VOLUME}"
 	fi
 
-	backup_container_operation restart
+	backup_container_operation restart "${OCARIOT_BACKUP_CONTAINER}"
 
 	echo "======Backup of ${VOLUME} volume======"
 
@@ -237,7 +243,7 @@ for VOLUME in ${VOLUMES_BKP}; do
 		-e GOOGLE_DRIVE_SECRET=${CLOUD_SECRET_ACCESS_KEY} \
 		-e AWS_ACCESS_KEY_ID=${CLOUD_ACCESS_KEY_ID} \
 		-e AWS_SECRET_ACCESS_KEY=${CLOUD_SECRET_ACCESS_KEY} \
-		${BACKUP_CONTAINER_NAME} bash -c "${COMMAND} && remove-older-than ${BACKUP_DATA_RETENTION} --force"
+		${OCARIOT_BACKUP_CONTAINER} bash -c "${COMMAND} && remove-older-than ${BACKUP_DATA_RETENTION} --force"
 
 	if [ $? != 0 ]; then
 		PROCESS_BKP=FALSE
@@ -247,7 +253,7 @@ for VOLUME in ${VOLUMES_BKP}; do
 	INCREMENT=$((INCREMENT + 1))
 done
 
-backup_container_operation stop
+backup_container_operation stop "${OCARIOT_BACKUP_CONTAINER}"
 
 if [ "${PROCESS_BKP}" = "OK" ]; then
 	RUNNING_SERVICES=$(echo ${RUNNING_SERVICES} | sed 's/ //g')
