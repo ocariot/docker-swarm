@@ -44,11 +44,11 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.1/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.2/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.1/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.2/install.sh | sudo bash
 ```
 
 
@@ -127,7 +127,7 @@ Variables responsible for defining backup settings. The variables with prefix `C
 In order for backup and restore operations to be successful, credentials must be granted permissions to manipulate the cloud storage location:
     
 - [Google Drive](https://console.developers.google.com/apis/credentials)
-When performing the first backup, a link will be provided that redirects the browser to a user's authentication screen at Google, thus granting permission to manipulate Google Drive. In future `backup` or `restore` operations, authentication is not required unless the `google_credentials` volume is removed.
+When performing the first backup, a link will be provided that redirects the browser to a user's authentication screen at Google, thus granting permission to manipulate Google Drive. In future `backup` or `restore` operations, authentication is not required unless the `ocariot-credentials-data` volume is removed.
 
 - [AWS S3](https://docs.aws.amazon.com/pt_br/sdk-for-java/v1/developer-guide/signup-create-iam-user.html)
 To use the `backup` or` restore` operations, it is necessary to associate the following policy with the created user:
@@ -278,7 +278,7 @@ Variables responsible for defining backup settings. The variables with prefix `C
 In order for backup and restore operations to be successful, credentials must be granted permissions to manipulate the cloud storage location:
     
 - [Google Drive](https://console.developers.google.com/apis/credentials)
-When performing the first backup, a link will be provided that redirects the browser to a user's authentication screen at Google, thus granting permission to manipulate Google Drive. In future `backup` or `restore` operations, authentication is not required unless the `google_credentials` volume is removed.
+When performing the first backup, a link will be provided that redirects the browser to a user's authentication screen at Google, thus granting permission to manipulate Google Drive. In future `backup` or `restore` operations, authentication is not required unless the `ocariot-monitor-credentials-data` volume is removed.
 
 - [AWS S3](https://docs.aws.amazon.com/pt_br/sdk-for-java/v1/developer-guide/signup-create-iam-user.html)
 To use the `backup` or` restore` operations, it is necessary to associate the following policy with the created user:
