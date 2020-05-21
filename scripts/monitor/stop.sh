@@ -10,8 +10,11 @@ clear_volumes()
             --format {{.Name}} \
             --filter "name=-$(echo $1 | sed 's/ /|-/g')")
     else
+				MONITOR_VOLUMES=$(cat ${INSTALL_PATH}/docker-monitor-stack.yml | grep -P "name: ocariot.*data" | sed 's/\(name:\| \)//g')
+				EXPRESSION_GREP=$(echo "${MONITOR_VOLUMES}" | sed 's/ /|/g')
         VOLUMES=$(docker volume ls --format {{.Name}} |
-            grep -P '(?<=ocariot-monitor).*(?=-data)')
+            grep -P '(?<=ocariot-monitor).*(?=-data)'|
+            grep -oE "${EXPRESSION_GREP}")
     fi
 
     for VOLUME in ${VOLUMES}

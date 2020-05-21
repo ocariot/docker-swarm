@@ -10,9 +10,11 @@ clear_volumes()
             --format {{.Name}} \
             --filter "name=-$(echo $1 | sed 's/ /|-/g')")
     else
+    		OCARIOT_VOLUMES=$(cat ${INSTALL_PATH}/docker-ocariot-stack.yml | grep -P "name: ocariot.*data" | sed 's/\(name:\| \)//g')
+				EXPRESSION_GREP=$(echo ${OCARIOT_VOLUMES} | sed 's/ /|/g')
         VOLUMES=$(docker volume ls --format {{.Name}} |
             grep -P '(?<=ocariot-).*(?=-data)' |
-            grep -v "$(echo ${MONITOR_STACK_NAME} | sed 's/_/-/g')")
+            grep -oE "${EXPRESSION_GREP}")
     fi
 
     for VOLUME in ${VOLUMES}
