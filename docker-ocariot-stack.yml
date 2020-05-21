@@ -485,8 +485,8 @@ services:
         max_attempts: 15
     environment:
       - NODE_ENV=production
-      - PORT_HTTP=8080
-      - PORT_HTTPS=8081
+      - PORT_HTTP=80
+      - PORT_HTTPS=443
       - SSL_KEY_PATH=/etc/.certs/server.key
       - SSL_CERT_PATH=/etc/.certs/server.cert
       - ISSUER=ocariot
@@ -515,8 +515,8 @@ services:
         source: ./config/ocariot/vault/.tokens/access-token-api-gateway-service
         target: /tmp/access-token-api-gateway-service
     ports:
-      - ${AG_PORT_HTTP}:8080
-      - ${AG_PORT_HTTPS}:8081
+      - ${AG_PORT_HTTP}:80
+      - ${AG_PORT_HTTPS}:443
     configs:
       - source: ocariot-init-api-gateway-config
         target: /usr/bin/initializing_api_gateway.sh
@@ -752,7 +752,7 @@ services:
       - VAULT_BASE_URL=https://vault:8200
       - NODE_ENV=production
       - PROTOCOL=https
-      - PORT=8001
+      - PORT=9001
     volumes:
       - type: bind
         source: ./config/ocariot/vault/.tokens/access-token-food-service
