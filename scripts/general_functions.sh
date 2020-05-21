@@ -215,6 +215,11 @@ cloud_bkps() {
 		-e "AWS_ACCESS_KEY_ID=${CLOUD_ACCESS_KEY_ID}" \
 		-e "AWS_SECRET_ACCESS_KEY=${CLOUD_SECRET_ACCESS_KEY}" \
 		blacklabelops/volumerize "${@:4}"
+
+	if [ $? -ne 0 ]; then
+		echo "There was a problem communicating with the cloud service"
+		exit
+	fi
 }
 
 validate_bkp_target() {

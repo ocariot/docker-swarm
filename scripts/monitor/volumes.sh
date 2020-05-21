@@ -188,7 +188,6 @@ for VOLUME in ${VOLUMES_BKP}; do
 	INCREMENT=$((INCREMENT + 1))
 done
 
-PROCESS_BKP="OK"
 BKP_CONFIG_MODEL=$(mktemp --suffix=.json)
 
 docker run -d --rm \
@@ -227,19 +226,15 @@ for VOLUME in ${VOLUMES_BKP}; do
 		${MONITOR_BACKUP_CONTAINER} bash -c "${COMMAND} && remove-older-than ${BACKUP_DATA_RETENTION} --force"
 
 	if [ $? != 0 ]; then
-		PROCESS_BKP=FALSE
 		echo "Error during $1 operation"
-		exit 1
 	fi
 	INCREMENT=$((INCREMENT + 1))
 done
 
 backup_container_operation stop "${MONITOR_BACKUP_CONTAINER}"
 
-if [ "${PROCESS_BKP}" = "OK" ]; then
-	RUNNING_SERVICES=$(echo ${RUNNING_SERVICES} | sed 's/ //g')
+RUNNING_SERVICES=$(echo ${RUNNING_SERVICES} | sed 's/ //g')
 
-	if [ "${RUNNING_SERVICES}" ]; then
-		${INSTALL_PATH}/scripts/monitor/start.sh
-	fi
+if [ "${RUNNING_SERVICES}" ]; then
+	${INSTALL_PATH}/scripts/monitor/start.sh
 fi
