@@ -384,6 +384,40 @@ services:
       options:
         max-size: 100m
 
+  psmdb-dt-process: # MongoDB container for the DT Process Service
+    hostname: psmdb-dt-process
+    image: percona/percona-server-mongodb:latest
+    user: root
+    environment:
+      - VAULT_BASE_URL=https://vault:8200
+    volumes:
+      - type: volume
+        source: psmdb-dt-process-data
+        target: /data/db
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-psmdb-dt-process
+        target: /tmp/access-token-psmdb-dt-process
+    command: initializing_psmdb.sh
+    configs:
+      - source: ocariot-mongo-config
+        target: /tmp/base_conf_mongod
+        mode: 400
+      - source: ocariot-init-psmdb-config
+        target: /usr/bin/initializing_psmdb.sh
+        mode: 0100
+    secrets:
+      - source: vault-ca-cert
+        target: /tmp/vault/ca.crt
+        mode: 0400
+    depends_on:
+      - vault
+    networks:
+      - ocariot
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
   psmysql-missions:
     hostname: psmysql-missions
     image: percona/percona-server:latest
@@ -824,6 +858,49 @@ services:
       options:
         max-size: 100m
 
+  dt-process: # Container for OCARIoT DT Process service
+    hostname: dt-process-service
+    image: ocariot/dtprocess-sloop:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 15s
+        max_attempts: 15
+    environment:
+      - VAULT_BASE_URL=https://vault:8200
+      - PROTOCOL=https
+      - PORT_HTTP=11000
+      - PORT_HTTPS=11001
+      - MONGODB_URI_PYTHON=mongodb://${DT_PROCESS_DB_USER}:${DT_PROCESS_DB_PASS}@mongo-dt-process:27017/dt-process?ssl=true&ssl_cert_reqs=CERT_NONE
+      - USERNAME_OCARIOT_API_DATA=${DT_API_DATA_USERNAME}
+      - PASSWORD_OCARIOT_API_DATA=${DT_API_DATA_PASSWORD}
+      - MONGO_DATABASE=dt-process
+      - MONGO_COLLECTION=SloopChildren
+    volumes:
+      - type: bind
+        source: ./config/ocariot/vault/.tokens/access-token-dt-process-service
+        target: /tmp/access-token-dt-process-service
+    command: initializing_service.sh
+    configs:
+      - source: ocariot-init-service-config
+        target: /usr/bin/initializing_service.sh
+        mode: 0100
+    secrets:
+      - source: vault-ca-cert
+        target: /tmp/vault/ca.crt
+        mode: 0400
+    depends_on:
+      - psmdb-dt-process
+      - rabbitmq
+      - vault
+    networks:
+      - ocariot
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+
   missions:
     hostname: missions-service
     image: ocariot/missions:latest
@@ -977,6 +1054,8 @@ volumes:
     name: ocariot-psmdb-gamification-data
   psmdb-notification-data:
     name: ocariot-psmdb-notification-data
+  psmdb-dt-process-data:
+    name: ocariot-psmdb-dt-process-data
   psmysql-missions-data:
     name: ocariot-psmysql-missions-data
   consul-data:
