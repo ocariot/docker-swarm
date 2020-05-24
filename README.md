@@ -44,11 +44,11 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.3/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.6.0/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.5.3/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.6.0/install.sh | sudo bash
 ```
 
 
@@ -111,7 +111,16 @@ Variables used by the Data Sync Agent microservice, responsible for data synchro
 | `FITBIT_CLIENT_SECRET` |  Client Secret for Fitbit Application resposible to manage user data. This information is later shared through the REST API to the android application _(DA App)_. | `1234ab56cd789123wzd123a` |
 | `EXPRESSION_AUTO_SYNC` | Frequency time that the application will sync the users data in background according to the crontab expression. For example, the value `0 * * * *` means that synchronization will occur every hour. | `"0 * * * *"` |
 
-#### 2.1.5 Authorization/Authentication Setup
+#### 2.1.5 DT Process Setup
+
+Variables to define the user's credentials for DT Process service.
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `DT_API_DATA_USERNAME` | Username of DT Process API data. | `dt_user` |
+| `DT_API_DATA_PASSWORD` | Password of DT Process API data. | `dt_secret` |
+
+#### 2.1.6 Authorization/Authentication Setup
 
 Variables to define the administrator user's credentials the first time the platform is instantiated.
 
@@ -120,7 +129,7 @@ Variables to define the administrator user's credentials the first time the plat
 | `ADMIN_USERNAME` | Username of the default admin user created automatically at the first time the OCARIoT platform is instantiated. | `admin` |
 | `ADMIN_PASSWORD` | Password of the default admin user created automatically at the first time the OCARIoT platform is instatiated. | `admin` |
 
-#### 2.1.6 Data Backup Setup
+#### 2.1.7 Data Backup Setup
 
 Variables responsible for defining backup settings. The variables with prefix `CLOUD` are commented out by default, to activate them uncommented and set their respective value based on the values provided by the cloud service that you want to perform the backups and restores. The supported cloud storage services are Google Drive and AWS S3.
 

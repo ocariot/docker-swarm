@@ -9,11 +9,12 @@ read_json()
 # Function to get credentials to mount URI and to access PSMDB
 get_psmdb_credential()
 {
-    PS_NAME="$(echo ${HOSTNAME} | sed  's/-service//g')"
+	  # Identifying the service that is running the script
+    local CONTAINER=$(echo ${HOSTNAME} | sed 's/-service//g')
 
     RET_CREDENTIAL=1
     while [[ $RET_CREDENTIAL -ne 200 ]]; do
-        echo "=> Waiting for ${PS_NAME} credential..."
+        echo "=> Waiting for ${CONTAINER} credential..."
         # The requests are realized every 2 seconds
         sleep 2
         # Request to get access credential for PSMDB
@@ -24,9 +25,6 @@ get_psmdb_credential()
                 ${VAULT_BASE_URL}/v1/database/creds/${HOSTNAME})
     done
 
-    # Identifying the service that is running the script
-    local CONTAINER=$(echo ${HOSTNAME} | sed 's/-service//g')
-
     # Processing credentials received
     CREDENTIAL=$(cat /tmp/psmdb_credential.json)
 
@@ -35,16 +33,21 @@ get_psmdb_credential()
     # Password received
     local PASSWD=$(read_json password ${CREDENTIAL})
 
-    if [ "${PS_NAME}" = "missions" ]; then
-        echo "export DATABASE_NAME=${PS_NAME}" >> ~/.bashrc
-        echo "export DATABASE_USER_NAME=${USER}" >> ~/.bashrc
-        echo "export DATABASE_USER_PASSWORD=${PASSWD}" >> ~/.bashrc
+    if [ "${CONTAINER}" = "missions" ]; then
+        echo -e "export DATABASE_NAME=${CONTAINER}\n" \
+        	"export DATABASE_USER_NAME=${USER}\n" \
+        	"export DATABASE_USER_PASSWORD=${PASSWD}" >> ~/.bashrc
+    elif [ "${CONTAINER}" = "dt-process" ]; then
+        echo -e "export MONGO_DATABASE=${CONTAINER}\n" \
+        	"export MONGO_COLLECTION=SloopChildren\n" \
+        	"export MONGODB_URI_PYTHON=mongodb://${USER}:${PASSWD}@psmdb-${CONTAINER}:27017/${CONTAINER}?ssl=true\&ssl_cert_reqs=CERT_NONE\n" \
+					"export MONGODB_URI=mongodb://${USER}:${PASSWD}@psmdb-${CONTAINER}:27017/${CONTAINER}?ssl=true" >> ~/.bashrc
     else
         # Mounting environment variable and placing in "~/.bashrc" file
         echo "export MONGODB_URI=mongodb://${USER}:${PASSWD}@psmdb-${CONTAINER}:27017/${CONTAINER}?ssl=true" >> ~/.bashrc
     fi
 
-    if [ "${PS_NAME}" = "notification" ]; then
+    if [ "${CONTAINER}" = "notification" ]; then
 
         RET=1
         while [[ $RET -ne 200 ]]; do
@@ -66,7 +69,7 @@ get_psmdb_credential()
         # User received
         local KEYSTORE_PASS=$(read_json value ${CREDENTIAL})
 
-        echo "export MONGO_NOTIFICATION_DATABASE=${PS_NAME} KEYSTORE_PASS=${KEYSTORE_PASS}" >> ~/.bashrc
+        echo "export MONGO_NOTIFICATION_DATABASE=${CONTAINER} KEYSTORE_PASS=${KEYSTORE_PASS}" >> ~/.bashrc
 
         keytool -import -file /etc/.certs/ca.crt -alias ca_vault \
           -keystore /usr/lib/jvm/java-1.8-openjdk/jre/lib/security/cacerts \
@@ -278,4 +281,3 @@ if [ "$(echo "${HOSTNAME}" | grep notification)" ];then
 else
     npm start
 fi
-
