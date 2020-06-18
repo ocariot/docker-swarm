@@ -510,7 +510,7 @@ services:
 
   api-gateway:
     hostname: api-gateway-service
-    image: ocariot/api-gateway:latest
+    image: ocariot/api-gateway:2.13.0-rc01
     deploy:
       replicas: 1
       restart_policy:
@@ -540,6 +540,7 @@ services:
       - VAULT_HOSTNAME=${VAULT_HOSTNAME}
       - RABBIT_MGT_HOSTNAME=${RABBIT_MGT_HOSTNAME}
       - MONITOR_HOSTNAME=${MONITOR_HOSTNAME}
+      - API_IOT_HOSTNAME=${API_IOT_HOSTNAME}
       - EMULATE_REDIS=false
       - PORT_REDIS=6379
       - HOST_REDIS=redis-api-gateway
@@ -577,7 +578,7 @@ services:
 
   account:
     hostname: account-service
-    image: ocariot/account:latest
+    image: ocariot/account:2.6.3-rc01
     deploy:
       replicas: 1
       restart_policy:
@@ -618,7 +619,7 @@ services:
 
   iot-tracking:
     hostname: iot-tracking-service
-    image: ocariot/iot-tracking:latest
+    image: ocariot/iot-tracking:2.3.0-rc01
     deploy:
       replicas: 1
       restart_policy:
