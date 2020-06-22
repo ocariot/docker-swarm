@@ -141,7 +141,9 @@ generate_certificates()
 		vault write pki/roles/devices \
         allow_any_name=true \
         use_csr_common_name=false \
-        use_csr_sans=false > /dev/null
+        use_csr_sans=false \
+        server_flag=false \
+        basic_constraints_valid_for_non_ca=true > /dev/null
 
     # Creating role to generate certificates that will
     # be used for account and api-gateway as JWT keys

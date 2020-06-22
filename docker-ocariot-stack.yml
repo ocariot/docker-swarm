@@ -510,7 +510,7 @@ services:
 
   api-gateway:
     hostname: api-gateway-service
-    image: ocariot/api-gateway:2.13.0-rc01
+    image: ocariot/api-gateway:latest
     deploy:
       replicas: 1
       restart_policy:
@@ -578,7 +578,7 @@ services:
 
   account:
     hostname: account-service
-    image: ocariot/account:2.6.3-rc01
+    image: ocariot/account:latest
     deploy:
       replicas: 1
       restart_policy:
@@ -619,7 +619,7 @@ services:
 
   iot-tracking:
     hostname: iot-tracking-service
-    image: ocariot/iot-tracking:2.3.0-rc01
+    image: ocariot/iot-tracking:latest
     deploy:
       replicas: 1
       restart_policy:
