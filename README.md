@@ -1,7 +1,7 @@
 # Docker Swarm - OCARIoT Production Deployment
 [![License][license-image]][license-url] [![Commit][last-commit-image]][last-commit-url] [![Releases][releases-image]][releases-url] [![Contributors][contributors-image]][contributors-url] 
 
-Repository with configuration files required for OCARIoT platform **deployment in production environment** using Docker Swarm.
+Repository with configuration files required for OCARIoT platform **deployment in production environment** using Docker Swarm. [A brief documentation on configuring client certificates on the OCARIoT platform is also available on the project Wiki.](https://github.com/ocariot/docker-swarm/wiki/Configuring-client-certificates-on-IoT-devices)
 
 ## Main Features:
 - **Simplified and automated startup through scripts.**
@@ -82,6 +82,7 @@ Variables to define the URL of services to be exposed, such as Vault and RabbitM
 | `VAULT_HOSTNAME` |  Vault HashiCorp hostname. | `vault.ocariot.com.br` |
 | `RABBIT_MGT_HOSTNAME` |  RabbitMQ Management hostname. | `rabbit.ocariot.com.br` |
 | `MONITOR_HOSTNAME` | Monitor/Grafana hostname. | `monitor.ocariot.com.br` |
+| `API_IOT_HOSTNAME` | API IoT hostname. | `iot.ocariot.com.br` |
 
 #### 2.1.2 External Service Ports
 Variables to define the ports of services to be exposed, such as API Gateway, Vault, and RabbitMQ Management.
