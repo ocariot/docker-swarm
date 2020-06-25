@@ -124,8 +124,26 @@ generate_certificates()
       # Changing global value of certificate expiration time
       vault secrets tune -max-lease-ttl=${DEFAULT_MAX_TTL} -default-lease-ttl=${TTL_CERT} pki
       # Enable Vault as CA-Root, which will sign the generated certificates
-      vault write pki/root/generate/internal common_name=ocariot ttl=${DEFAULT_MAX_TTL} > /dev/null
+			vault write pki/root/generate/internal \
+				ttl=${DEFAULT_MAX_TTL} \
+				common_name=ocariot.vault.pki \
+				province=Bruxelas \
+				country=UE \
+				locality=OCARIoT \
+				organization=OCARIoT > /dev/null
+
+			vault write pki/config/urls \
+        issuing_certificates="https://vault.ocariot.test/v1/pki/ca" \
+        crl_distribution_points="https://vault.ocariot.test/v1/pki/crl"
     fi
+
+		# Creating role to generate certificates that will be used for devices
+		vault write pki/roles/devices \
+        allow_any_name=true \
+        use_csr_common_name=false \
+        use_csr_sans=false \
+        server_flag=false \
+        basic_constraints_valid_for_non_ca=true > /dev/null
 
     # Creating role to generate certificates that will
     # be used for account and api-gateway as JWT keys
@@ -313,12 +331,12 @@ generate_policies()
 {
     # Loading every policies
     POLICIES_DIRECTORY="/etc/vault/policies/"
-    CONTAINERS=$(ls ${POLICIES_DIRECTORY} | sed s/.hcl//g)
+    POLICIES=$(ls ${POLICIES_DIRECTORY} | sed s/.hcl//g)
 
-    for CONTAINER in ${CONTAINERS};do
+    for POLICY in ${POLICIES};do
       # Creating the policies that will be used in token generations
       # Each police is mapped with the name registered in file
-      vault policy write ${CONTAINER} ${POLICIES_DIRECTORY}${CONTAINER}.hcl  > dev/null
+      vault policy write ${POLICY} ${POLICIES_DIRECTORY}${POLICY}.hcl  > dev/null
     done
 }
 
