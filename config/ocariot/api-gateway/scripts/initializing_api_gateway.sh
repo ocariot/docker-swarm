@@ -30,11 +30,53 @@ get_public_jwt()
     echo -e "${PUBLIC_KEY}" > /etc/.certs/jwt.pub
     echo "export JWT_PUBLIC_KEY_PATH=/etc/.certs/jwt.pub" >> ~/.bashrc
 
-    # Executing "~/.bashrc" script to enable JWT_PUBLIC_KEY_PATH environment variable
-    source ~/.bashrc
-
     # Removing temporarily file utilized in request
     rm  /tmp/jwt_public_key.json
+}
+
+# Function to get server certificates from Vault
+get_certificates()
+{
+    RET_CERT=1
+    while [[ $RET_CERT -ne 200 ]]; do
+        echo "=> Waiting for certificates..."
+        # The requests are realized every 2 seconds
+        sleep 2
+        # Request to get server certificates from Vault
+        RET_CERT=$(curl \
+            --header "X-Vault-Token: ${VAULT_ACCESS_TOKEN}" \
+            --request POST \
+            --data-binary "{\"common_name\": \"${API_IOT_HOSTNAME}\"}" \
+            --silent \
+            --output /tmp/certificates.json -w "%{http_code}\n" \
+            ${VAULT_SERVICE}/v1/pki/issue/${HOSTNAME})
+    done
+
+    mkdir -p /etc/.certs/iot_device
+
+    # Processing certificates
+    CERTIFICATES=$(cat /tmp/certificates.json)
+
+    # Placing and referencing private key server for /etc/.certs/iot_device/server.key
+    # through of SSL_KEY_PATH environment variable
+    PRIVATE_KEY=$(read_json private_key "${CERTIFICATES}")
+    echo -e "${PRIVATE_KEY}" > /etc/.certs/iot_device/server.key
+    echo "export SSL_IOT_KEY_PATH=/etc/.certs/iot_device/server.key" >> ~/.bashrc
+
+    # Placing and referencing public key server for /etc/.certs/iot_device/server.cert
+    # through of SSL_CERT_PATH environment variable
+    CERTIFICATE=$(read_json certificate "${CERTIFICATES}")
+    echo -e "${CERTIFICATE}" > /etc/.certs/iot_device/server.cert
+    echo "export SSL_IOT_CERT_PATH=/etc/.certs/iot_device/server.cert" >> ~/.bashrc
+
+    # Placing and referencing ca server for /etc/.certs/iot_device/ca.crt
+    # through of RABBITMQ_CA_PATH environment variable
+    CA=$(read_json issuing_ca "${CERTIFICATES}")
+    echo -e "${CA}" > /etc/.certs/iot_device/ca.crt
+    echo "export SSL_IOT_CA_PATH=/etc/.certs/iot_device/ca.crt" >> ~/.bashrc
+
+    # Removing temporary file utilized in request
+    rm /tmp/certificates.json
 }
 
 # Function used to add the Vault CA certificate to the system, with
@@ -66,7 +108,7 @@ configure_environment()
     done
 
     # Establishing access token received as environment variable
-    source /tmp/access-token-${HOSTNAME}
+    set -a && source /tmp/access-token-${HOSTNAME} && set +a
     # Clearing access token file
     > /tmp/access-token-${HOSTNAME}
 }
@@ -77,8 +119,11 @@ configure_environment
 # Function utilized to get the JWT public key from Vault
 get_public_jwt
 
-# Removing the environment variable access token
-unset VAULT_ACCESS_TOKEN
+# Function to get server certificates from Vault
+get_certificates
+
+# Executing "~/.bashrc" script to enable JWT_PUBLIC_KEY_PATH environment variable
+source ~/.bashrc
 
 # Starting API Gateway
 npm start
