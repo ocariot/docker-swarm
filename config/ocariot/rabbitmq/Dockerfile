@@ -1,4 +1,3 @@
-FROM rabbitmq:3.8.2
+FROM rabbitmq:3.8.9-alpine
 
-RUN apt-get update
-RUN apt-get install curl jq -y
+RUN apk --no-cache add curl jq
