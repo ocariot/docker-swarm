@@ -44,11 +44,11 @@ Repository with configuration files required for OCARIoT platform **deployment i
 All software installation is performed using the following command:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.7.0/install.sh | sudo bash
+curl -o- https://raw.githubusercontent.com/ocariot/docker-swarm/1.7.1/install.sh | sudo bash
 ```
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.7.0/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/ocariot/docker-swarm/1.7.1/install.sh | sudo bash
 ```
 
 
@@ -174,6 +174,16 @@ To use the `backup` or` restore` operations, it is necessary to associate the fo
 | `RESTORE_TARGET` | Define the target used to restore the backup. example value: `LOCAL, GOOGLE_DRIVE, AWS`. | `AWS` |
 | `BACKUP_DATA_RETENTION` | Time the data backup will remain stored. Default value (15 days): `15D`. | `15D` |
 
+#### 2.1.8 Versions of Infrastructure Services
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `VAULT_VERSION` | Tag referring to the version of the image provided by the Docker Hub. Repository: https://hub.docker.com/_/vault | `1.5.4` |
+| `CONSUL_VERSION` | Tag referring to the version of the image provided by the Docker Hub. Repository: https://hub.docker.com/_/consul | `1.8.4` |
+| `PERCONA_MONGO_VERSION` | Tag referring to the version of the image provided by the Docker Hub.  Repository: https://hub.docker.com/r/percona/percona-server-mongodb | `4.2` |
+| `PERCONA_MYSQL_VERSION` | Tag referring to the version of the image provided by the Docker Hub. Repository: https://hub.docker.com/r/percona/percona-server | `8.0` |
+| `RABBIT_VERSION` | Tag referring to the version of the image provided by the Docker Hub. Repository: https://hub.docker.com/r/ocariot/rabbitmq | `2.0.0` |
+| `REDIS_VERSION` | Tag referring to the version of the image provided by the Docker Hub. Repository: https://hub.docker.com/_/redis | `6.0.8` |
 
 ### 2.2 Building and Deploying the containers
 
