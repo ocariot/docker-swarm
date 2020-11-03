@@ -868,6 +868,9 @@ services:
         condition: any
         delay: 15s
         max_attempts: 15
+      resources:
+        limits:
+          memory: 250M
     environment:
       - VAULT_BASE_URL=https://vault:8200
       - PROTOCOL=https
