@@ -870,17 +870,19 @@ services:
         max_attempts: 15
       resources:
         limits:
-          memory: 250M
+          memory: 600M
     environment:
       - VAULT_BASE_URL=https://vault:8200
       - PROTOCOL=https
       - PORT_HTTP=11000
       - PORT_HTTPS=11001
+      - PYTHON_PORT=11002
       - MONGODB_URI_PYTHON=mongodb://${DT_PROCESS_DB_USER}:${DT_PROCESS_DB_PASS}@mongo-dt-process:27017/dt-process?ssl=true&ssl_cert_reqs=CERT_NONE
       - USERNAME_OCARIOT_API_DATA=${DT_API_DATA_USERNAME}
       - PASSWORD_OCARIOT_API_DATA=${DT_API_DATA_PASSWORD}
       - MONGO_DATABASE=dt-process
       - MONGO_COLLECTION=SloopChildren
+      - CRON=0 12 * * *
     volumes:
       - type: bind
         source: ./config/ocariot/vault/.tokens/access-token-dt-process-service
